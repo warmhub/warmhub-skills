@@ -1,0 +1,3 @@
+display_name: WarmHub Repo Design
+short_description: Design or review WarmHub repositories with multi-entry guidance — query-first, entities-first, pattern-match, or sources-first — converging on traversability, foundation discipline, and adoption gates.
+default_prompt: Design or review this WarmHub repository model. Pick the entry that fits your situation (query-first / entities-first / pattern-match / sources-first), diagnose the 9-dimension fingerprint, match a pattern in the catalog, walk the pitfalls, and verify the convergence checkpoint before adoption.

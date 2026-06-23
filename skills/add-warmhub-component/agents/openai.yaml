@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add WarmHub Component"
+  short_description: "Install or package WarmHub components"
+  default_prompt: "Use $add-warmhub-component to install an existing WarmHub component such as Veritas or package a repo with warmhub/component.json, warmhub/manifest.json, subscriptions, credentials, seeds, and health checks."

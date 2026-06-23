@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build WarmHub Display"
+  short_description: "Build read surfaces for WarmHub data"
+  default_prompt: "Use $build-warmhub-display to choose and scaffold a WarmHub display surface with repo discovery, app connection, source attribution, real WarmHub readback, validation, and next-stage handoff."

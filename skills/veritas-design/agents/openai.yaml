@@ -1,0 +1,4 @@
+interface:
+  display_name: "Veritas Design"
+  short_description: "Design Veritas-backed consensus in WarmHub repos"
+  default_prompt: "Use $veritas-design to decide whether a WarmHub repo should use Veritas, then design binary propositions, Certainty sources, reputation seeding, Oracle topology, and Consensus consumption."

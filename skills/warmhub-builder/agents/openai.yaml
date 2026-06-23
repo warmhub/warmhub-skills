@@ -1,0 +1,4 @@
+interface:
+  display_name: "WarmHub Builder"
+  short_description: "Coordinate WarmHub project builds"
+  default_prompt: "Use $warmhub-builder to intake a WarmHub project idea, choose the builder shape, initialize the manifest, and continue through installed builder stages until the requested artifact is verified or blocked."

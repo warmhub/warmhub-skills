@@ -1,0 +1,4 @@
+interface:
+  display_name: "WarmHub Commit Design"
+  short_description: "Design WarmHub commit plans"
+  default_prompt: "Design a safe, performant WarmHub commit plan for this dataset or scenario."

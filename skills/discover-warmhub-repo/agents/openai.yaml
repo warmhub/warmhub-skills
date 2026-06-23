@@ -1,0 +1,4 @@
+interface:
+  display_name: "Discover WarmHub Repo"
+  short_description: "Read-only WarmHub repo fact discovery"
+  default_prompt: "Use $discover-warmhub-repo to inspect an existing WarmHub repo and summarize shapes, counts, cadence, sensitivity, and attribution context."
