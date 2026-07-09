@@ -247,8 +247,10 @@ Q5.1 — describeRepo identifies benchmark capture with commensurability contrac
 
 Q5.2 — Measurement.about carries (BenchmarkSystem, Dataset, Metric) — three-axis traversal.
   wh assertion list --shape <Measurement> --limit 1 --json
-  Expected: aboutWref starts with `Triple/BenchmarkSystem+Dataset+Metric/...`,
-  not a single-thing wref with the other two axes as flat-string data fields.
+  Expected: aboutWref starts with a named collection wref with a `+`-free name, e.g.
+  `Set/measurement-key-<slug>` (or a named domain shape wref, e.g. `MeasurementKey/<slug>`),
+  not a single-thing wref with the other two axes as flat-string data fields. (`triple` is
+  removed and collection names must not contain `+`.)
 
 Q5.3 — Commensurability metadata are first-class graph fields.
   wh shape view <Measurement> --json
@@ -343,18 +345,18 @@ Q5.1 — describeRepo identifies external-proxy + relationship-analysis pattern.
   Expected: description names the proxy shapes (TicketProxy, Vent, etc.) and
   the relationship-assertion shapes; identifies BDU-on-edges as the certainty model.
 
-Q5.2 — Relationship assertions use Pair / Set / Triple about — never single-thing
-  about with flat-string endpoints. This is the canonical Gate 2 failure surface.
+Q5.2 — Relationship assertions use Pair / Set about (or a named domain shape) — never
+  single-thing about with flat-string endpoints. This is the canonical Gate 2 failure surface.
   wh assertion list --shape <DuplicateAssertion> --limit 1 --json
   wh assertion list --shape <Resolution> --limit 1 --json
-  Expected: aboutWref starts with `Pair/`, `Set/`, or `Triple/` — never a bare
+  Expected: aboutWref starts with `Pair/` or `Set/` — never a bare
   `Proxy/...` wref with the other endpoint hidden in data fields. (Running
   `verify-relationships.mjs` over this fingerprint is recommended.)
 
 Q5.3 — From any external proxy, all relationships pointing at it are traversable
   via wh thing refs --inbound (both same-repo and cross-repo).
   wh thing refs <TicketProxy/example> --inbound
-  Expected: returns every Pair / Set / Triple containing this proxy, across same-repo
+  Expected: returns every Pair / Set containing this proxy, across same-repo
   and cross-repo refs in one call.
 
 Q5.4 — CertaintyOpinion lives on the relationship assertion, not on either endpoint.
@@ -445,7 +447,7 @@ QU.2 — Hierarchical names encode stable identity, not mutable state. No shapes
 QU.3 — Append-only revision is visible: no shapes are mutated in place. State changes
   flow through certainty / basis / review / decision assertions.
 
-QU.4 — Pair / Triple / Set / List targets have convenience fields
+QU.4 — Pair / Set / List targets have convenience fields
   (subjectWref, objectWref, kind, identityKey) mirrored on the assertion for
   context-free reader legibility.
 

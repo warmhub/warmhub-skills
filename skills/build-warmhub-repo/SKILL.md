@@ -339,8 +339,10 @@ fields when this is the terminal stage; otherwise include them in the next-step 
 - **Commit attribution** — if you pass `opts.committer` to `client.commit.apply`, it must be a full
   existing thing wref such as `Agent/data-ingest`, not a bare name
 - **Assertion `about` field** — required on `add`, omitted on `revise`
-- **Collection `about` values** — emit inline `{ "pair": [...] }`, `{ "set": [...] }`, etc. in ops
-  rather than constructing concrete Pair/Set wref strings yourself
+- **Collection `about` values** — `about` accepts a wref only; inline `{ "set": [...] }` / `{ "pair": [...] }`
+  objects are rejected. Emit the collection as its own named `add` op (`kind: "collection"`, `type`,
+  `members`) first, then point the assertion's `about` at the resulting `Set/…` / `Pair/…` wref. Use a
+  deterministic, member-derived collection name so re-runs and `--skip-existing` stay replay-safe
 - **Version-pinned wrefs** — `@vN` reads a historical target by design; do not use pinned examples as
   proof that HEAD re-resolution works
 - **Add ops are not replay-safe by themselves** — deterministic names plus conflict/idempotency logic

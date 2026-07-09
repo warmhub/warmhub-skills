@@ -2,7 +2,7 @@
 name: modeling-foundations
 description: >
   Apply WarmHub repo-modeling foundations before design, build, or review work. Use when choosing
-  things versus assertions, selecting assertion about-cardinality (single thing, Pair, Triple, Set,
+  things versus assertions, selecting assertion about-cardinality (single thing, Pair, Set,
   List), running the four-direction traversability test, checking universal shape rules, classifying
   domain pressure, or walking modeling pitfalls. Trigger phrases: "WarmHub modeling foundations",
   "four-direction test", "about cardinality", "traversability", "things versus assertions".

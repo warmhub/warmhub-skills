@@ -1,0 +1,41 @@
+{
+  "add-warmhub-component": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "build-warmhub-collector": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "build-warmhub-display": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "build-warmhub-repo": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "connect-warmhub-app": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "design-warmhub-repo": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "discover-warmhub-repo": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "find-self-verifying-objectives": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "modeling-foundations": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "plan-warmhub-ingestion": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "veritas-design": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "warmhub-builder": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  },
+  "wh-commit-design": {
+    "source_commit": "0018819007a401a84d4a7f9ec4e529e6f9ede345"
+  }
+}

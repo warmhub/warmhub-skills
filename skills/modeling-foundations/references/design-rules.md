@@ -208,7 +208,7 @@ This rule interacts with **Source Ownership** above (matching-critical fields ar
 
 > The primary rule is in [`primitives.md` § The Traversability Contract](primitives.md). This section covers the *secondary* readability concern that arises after the primary contract is satisfied. Get `about` arity right first (per primitives.md and the four-direction test); then apply the mirroring rule below for context-free reader legibility.
 
-If the native assertion target uses a `Pair`, `Triple`, `Set`, `List`, or other collection edge target, mirror the practical traversal fields onto the assertion.
+If the native assertion target uses a `Pair`, `Set`, `List`, or other collection edge target, mirror the practical traversal fields onto the assertion.
 
 For a basis-style assertion, include fields like:
 - `<subject>Wref` (e.g. `claimWref`, `hypothesisWref`)

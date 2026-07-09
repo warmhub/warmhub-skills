@@ -44,7 +44,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `ExternalSourceReference` — proxy for a paper/document, identified by arXiv/DOI/URL.
 - `GitFileRevision` — proxy for a wiki file at a specific commit + path.
 - `ReviewedClaim` — a manually reviewed, scoped claim about a subject artifact.
-- `ClaimBasis` — assertion linking a claim to a source proxy. `about: { pair: [ReviewedClaim, source-proxy] }`. Mirrored fields: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey`.
+- `ClaimBasis` — assertion linking a claim to a source proxy. A named collection op creates the Pair first; the assertion targets it via `about: "Pair/<name>"`. Mirrored fields: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey`.
 - `CertaintyOpinion` — belief / disbelief / uncertainty about a claim (binary proposition).
 - `ReviewEvent` — single-author event recording why certainty, basis, or scope changed.
 
@@ -105,7 +105,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `Proposal` — graph-internal identity; carries problem statement, scope, rationale.
 - `ProposalVersion` — append-only revision; never overwrites prior versions.
 - `Alternative` — a competing proposed approach within the same Proposal scope; preserved with `dismissalRationale` even when not chosen.
-- `Vote` — `about: { pair: [Proposal, Voter] }`; carries position + commentary.
+- `Vote` — `about: "Pair/<name>"` (named collection op first); carries position + commentary.
 - `Ratification` — durable adoption event with effective-from + rollback criteria.
 - `PolicyArtifact` — proxy for the deployed policy (URL, file path, config key) — the graph asserts about it but doesn't store its bytes.
 - `ComplianceSignal` — bounded-cadence external evidence; adjudication slot for whether the policy is still serving its goal.
@@ -134,7 +134,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `DeploymentEvent` — append-only event; commit + image + actor + timestamp.
 - `FeatureFlagState` — append-only flag-change event; no current-value shape (current state is derived).
 - `HealthSignal` — continuous external evidence (probe result, error-rate sample, latency snapshot).
-- `IncidentLink` — `about: { pair: [Incident, Service] }`; connects an incident proxy to suspected services.
+- `IncidentLink` — `about: "Pair/<name>"` (named collection op first); connects an incident proxy to suspected services.
 
 **Why this works.** Cheap deterministic ingestion means no content-addressed policy shapes. Continuous evidence is the entire point — without it the graph is just a stale config dump. Agent-only ephemeral review means no `ReviewEvent` ceremony around state changes. Simple D8 means flat shapes without competing-hypothesis machinery.
 
@@ -158,7 +158,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 **Load-bearing shapes.**
 - `TicketProxy` / `TranscriptProxy` — external identities.
 - `ThemeHypothesis` — graph-synthesized cluster identity, with BDU on "this is a coherent theme" (binary proposition).
-- `ClusterAssignment` — `about: { pair: [TicketProxy, ThemeHypothesis] }`; carries assignment confidence.
+- `ClusterAssignment` — `about: "Pair/<name>"` (named collection op first); carries assignment confidence.
 - `MaterializationContextPolicy` — what the clustering pass saw (corpus window, embedding model, prompt version). Content-addressed.
 - `ThemeReviewEvent` — human PM review that confirms/rejects/refines a theme.
 - `InvestmentRecommendation` — proposed engineering investment derived from a cluster's volume + severity.
@@ -247,7 +247,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `BenchmarkSystem` — pre-existing catalog of systems under test (convex / postgres-cli / postgres-direct / ...).
 - `Dataset` — pre-existing catalog of workloads.
 - `Metric` — pre-existing catalog of measured quantities (latency, throughput, glob).
-- `Measurement` — graph-synthesized assertion; `about: { triple: [BenchmarkSystem, Dataset, Metric] }` (or a different arity if comparability requires more axes); carries percentile envelope + commensurability metadata as **first-class fields** (gitSha, repoState, latencyProfile, dataset variant).
+- `Measurement` — graph-synthesized assertion; the `triple` type is removed, so the (System, Dataset, Metric) key is modeled as a named domain shape whose name encodes all three axes with a `+`-free slug (e.g. `MeasurementKey/<system>-<dataset>-<metric>`; `+` is rejected in thing and collection names alike), referenced via `about: "<Shape>/<name>"`, or as a named Set via `about: "Set/<name>"` if the axes are mechanical grouping rather than a genuine domain shape; carries percentile envelope + commensurability metadata as **first-class fields** (gitSha, repoState, latencyProfile, dataset variant).
 
 **Why this works.** The hard problem in this domain is not "how do I store a number" but "how do I know two stored numbers are comparable." Pulling the comparability metadata out of an opaque `metadata` JSON blob and into first-class graph fields is what lets queries answer "which two of these can I trend together?" Without that, the graph is a numeric ledger; with it, the graph is a benchmarking analysis substrate.
 
@@ -270,7 +270,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 
 **Load-bearing shapes.**
 - Inherits the research-arc foundation.
-- Adds: `Persona` (durable typed Thing — not a role label); `Seat` (`about: { pair: [Council, Persona] }` — council membership as first-class assertion); `Hypothesis.persona` wref; `Hypothesis.premises[]` wref array (MECE conditions); `Hypothesis.discriminatesAgainst[]`; `RoundDigest`, `SessionOutcome`; `Critique` as a multi-target authored assertion.
+- Adds: `Persona` (durable typed Thing — not a role label); `Seat` (`about: "Pair/<name>"`, named collection op first — council membership as first-class assertion); `Hypothesis.persona` wref; `Hypothesis.premises[]` wref array (MECE conditions); `Hypothesis.discriminatesAgainst[]`; `RoundDigest`, `SessionOutcome`; `Critique` as a multi-target authored assertion.
 
 **Why this works.** Persona persistence (D7.2 = durable typed Thing) is the design's central commitment. A persona is not a tag on an output; it's an identity with track record, attribution edges, and cross-session scoring. Adversarial review (D7.1 = adversarial-mixed) requires `Critique` as a multi-target shape, not a single-author `ReviewEvent`. Competing hypotheses with structured premises (D8.1 = multiple, D8.2 = confidence-with-structured-premises) preserve discriminating evidence rather than collapsing to a winner.
 
@@ -294,7 +294,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 **Load-bearing shapes (3).**
 - `Topic` — named anchor; description-only thing.
 - `Lesson` — atomic insight (title + context + insight + trigger); single canonical fact, not a multi-perspective claim.
-- `Learning` — assertion connecting Topic to Lesson via Pair: `about: { pair: [Topic, Lesson] }`; carries `relevance: { b, d, u, a }` as edge-strength opinion.
+- `Learning` — assertion connecting Topic to Lesson via Pair: `about: "Pair/<name>"` (named collection op first); carries `relevance: { b, d, u, a }` as edge-strength opinion.
 
 **Why this works.** Cheap derivation + declarative output + topic-spine cluster pattern fits a knowledge-accumulation graph cleanly. The defining design choice is **D8.2 = BDU-on-edges**: the *Lesson* is a fact (no uncertainty about whether it's true); the *strength of association between a Lesson and a Topic* is what carries belief / disbelief / uncertainty. This places BDU in a structurally different location than the synthesize-and-test pattern.
 
@@ -320,7 +320,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 
 **Load-bearing shapes.**
 - `<ExternalProxy>` (e.g. `TicketProxy`, `Vent`, `FrictionTarget`) — pre-existing entity identities.
-- `<RelationshipAssertion>` (e.g. `DuplicateAssertion`, `DependencyAssertion`, `Resolution`) — graph-synthesized analytical assertions. **`about` is a Pair, Set, or Triple of proxies — never a single proxy with the others as flat string fields.** This is the canonical case where the four-direction test in `primitives.md` is load-bearing.
+- `<RelationshipAssertion>` (e.g. `DuplicateAssertion`, `DependencyAssertion`, `Resolution`) — graph-synthesized analytical assertions. **`about` is a Pair or Set of proxies (or a named domain shape for genuine ternary relations) — never a single proxy with the others as flat string fields.** This is the canonical case where the four-direction test in `primitives.md` is load-bearing.
 - `CertaintyOpinion` — BDU on the *relationship-strength* (binary proposition: "is this really a duplicate? yes/no").
 - `ReviewEvent` — single-author event when a human confirms or refutes a graph-synthesized relationship.
 
@@ -478,7 +478,7 @@ These show up as catalog matches that *almost* work but fail in characteristic w
 
 **Symptom.** A relationship assertion has `about: <single thing>` with the second (or third) endpoint as a flat string field. The relationship is invisible from one of its endpoints' `wh thing about` queries.
 
-**Fix.** Use Pair / Set / Triple per the four-direction test in `primitives.md`. A single-thing `DuplicateAssertion` is the canonical failure; a Pair-about `Resolution` is the canonical pass. The *multi-valued* form of this anti-pattern is a JSON-stringified list of ids in a single string field (`evidence_ids: "[...]"`): use a native **wref array** (each member reverse-traverses via `refs --inbound`, cross-repo) or a relationship assertion instead — never a stringified blob. See [`field-level-design.md` § Multi-valued fields](../../modeling-foundations/references/field-level-design.md).
+**Fix.** Use Pair / Set per the four-direction test in `primitives.md` (or a named domain shape for a true 3-way relation). A single-thing `DuplicateAssertion` is the canonical failure; a Pair-about `Resolution` is the canonical pass. The *multi-valued* form of this anti-pattern is a JSON-stringified list of ids in a single string field (`evidence_ids: "[...]"`): use a native **wref array** (each member reverse-traverses via `refs --inbound`, cross-repo) or a relationship assertion instead — never a stringified blob. See [`field-level-design.md` § Multi-valued fields](../../modeling-foundations/references/field-level-design.md).
 
 ---
 

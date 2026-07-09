@@ -192,7 +192,7 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 - One-sided traversal: `wh thing about TicketProxy/<A>` returns the DuplicateAssertion; `wh thing about TicketProxy/<B>` does not.
 - `originalWref: string` doesn't participate in `wh thing refs`, doesn't enforce identity validation, isn't version-pinned.
 
-**The canonical fix.** A `Resolution` uses `about: { pair: [Vent, ResolutionTarget] }`. Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
+**The canonical fix.** A `Resolution` uses a named Pair collection referenced via `about: "Pair/<name>"` (created by a prior `kind: "collection"` op). Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
 
 **Why it matters operationally.** `about` is **immutable**. The recovery path for a wrong arity is to retract the bad assertions and re-assert with the correct arity. The retracted assertions remain in version history but are hidden from default queries. This is workable when caught early; expensive when discovered after large data load. The four-direction test in `primitives.md` exists to catch this *before* data lands.
 
@@ -204,11 +204,12 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 If any fails because of a flat string field where a wref edge should be, you have arity mismatch.
 
-**Fix.** Choose the right collection type per `primitives.md`:
-- **Pair** for directional 2-way (A → B differs from B → A): `about: { pair: [<from>, <to>] }`.
-- **Set** for symmetric or n-way: `about: { set: [<a>, <b>, ...] }`.
-- **Triple** for ordered 3-way: `about: { triple: [<a>, <b>, <c>] }`.
-- **List** for ordered with possible duplicates: `about: { list: [<a>, <b>, ...] }`.
+**Fix.** Choose the right collection type per `primitives.md`. In every case, create a named `kind: "collection"` op first, then point the assertion's `about` at the resulting wref — `about` accepts a wref only, never an inline collection object:
+- **Pair** for directional 2-way (A → B differs from B → A): named `pair` collection op, then `about: "Pair/<name>"`.
+- **Set** for symmetric or n-way: named `set` collection op, then `about: "Set/<name>"`.
+- **List** for ordered with possible duplicates: named `list` collection op, then `about: "List/<name>"`.
+
+For a genuine three-way relation, don't reach for a removed `triple` type — recommend a named domain shape or assertion that models the ternary relation directly; for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing, use `set` or `list` instead.
 
 Then add the mirrored convenience fields (`<subject>Wref`, `<object>Wref`, `<kind>`, `<identityKey>`) for context-free reader legibility — see `design-rules.md` § Context-Free Legibility.
 

@@ -107,7 +107,7 @@ Useful signals in roughly decreasing order of value:
 
 ## Notes for context
 
-- The skill is intentionally opinionated about a few things, especially: relationship endpoints should be in `about: { pair / set / triple / list: [...] }` rather than encoded as flat string fields (because `about` is immutable and a flat field is invisible to backref queries); "needs work" / "queue" / "stale" state should be a derived query, not a durable shape; and synthesized artifacts produced by expensive (LLM, embedding, scoring) derivations should bind to a content-addressed policy shape so verdicts can be retracted en masse when the policy changes.
+- The skill is intentionally opinionated about a few things, especially: relationship endpoints should target a named collection via `about: "Pair/<name>"` (or `Set/`/`List/`), created by a prior named `kind:"collection"` op, rather than encoded as flat string fields (because `about` is immutable and a flat field is invisible to backref queries); "needs work" / "queue" / "stale" state should be a derived query, not a durable shape; and synthesized artifacts produced by expensive (LLM, embedding, scoring) derivations should bind to a content-addressed policy shape so verdicts can be retracted en masse when the policy changes.
 - The skill has been validated empirically (5-prompt eval battery, 49 assertions, 2 iterations) — but every additional real-world test prompt that surfaces a gap is high-value feedback.
 
 ## Where to send feedback

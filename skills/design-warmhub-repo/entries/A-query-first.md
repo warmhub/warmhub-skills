@@ -79,7 +79,7 @@ Before designing the shape that would unblock an `[F]` query, walk through the [
 3. As an aggregation across the assertion type?
 4. As a derived rollup combining hops?
 
-If any direction would need a field-string-match, the `about` arity you're imagining is wrong. Choose Pair / Set / Triple / List per the rules in primitives.md *before* writing the shape.
+If any direction would need a field-string-match, the `about` arity you're imagining is wrong. Choose Pair / Set / List per the rules in primitives.md *before* writing the shape.
 
 ### 5. Now diagnose the dimensions
 
