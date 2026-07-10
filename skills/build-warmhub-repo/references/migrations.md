@@ -2,7 +2,7 @@
 
 This file applies when you have an existing populated WarmHub graph and you need to change something the immutable-`about` rule won't let you change in place. Three common triggers:
 
-- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design is `about: { set: [a, b] }` or `about: { pair: [a, b] }`.
+- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design emits a named `kind: "collection"` op (`type: "set"` or `type: "pair"`, a stable `name`, and `members`) and then targets the assertion at that collection's wref — `about: "Set/<name>"` or `about: "Pair/<name>"`. `about` accepts a wref only; an inline `about: { set: [a, b] }` object is rejected.
 - **Shape semantic change.** A v1 shape gets revised to mean something different, or split into two shapes; existing assertions targeting it now have the wrong target shape.
 - **Subject swap.** A v1 design asserts about the wrong target (e.g. `about: Filing` when the navigation axis should have been `about: Company`); the new design points at a different thing.
 
@@ -20,7 +20,7 @@ Per v1 thing migrated, apply all four:
 
 ### 1. Deterministic v2 names from canonical-sorted member wrefs
 
-Hash the v2 assertion's `about` members (in canonical order — sorted for `Set`, ordered as-given for `Pair` / `Triple` / `List`) plus the v2 shape name. Derive the v2 wref from that hash. The wref must be identical on every re-run.
+Hash the v2 assertion's `about` members (in canonical order — sorted for `Set`, ordered as-given for `Pair` / `List`) plus the v2 shape name. Derive the v2 wref from that hash. The wref must be identical on every re-run.
 
 ```
 v2-wref = <ShapeName>/<prefix>-<short-hash>
@@ -74,31 +74,37 @@ Concrete case from a real production migration. Starting state (verified before 
 - 1 dependent `CertaintyOpinion/cert-19101a0fcc30826d` with `about: DuplicateAssertion/dup-19101a0fcc30826d` and BDU `(b: 0.7, d: 0.1, u: 0.2, a: 0.5)`.
 - 1 dependent `ReviewEvent/rev-19101a0fcc30826d` with `about: DuplicateAssertion/dup-19101a0fcc30826d` and reviewer + note.
 
-Single-thing migration emits **6 atomic ops** in one `wh commit submit --ops`:
+Single-thing migration emits **7 atomic ops** in one `wh commit submit --ops`. The v2 `about` is a
+`Set`, and `about` accepts a wref only — so the `Set` collection is its own named op, emitted before
+the assertion that points at it:
 
 ```
-1. add      DuplicateAssertion/dup-set-7c8b57255900e95f
-            about: { set: [TicketProxy/<A>, TicketProxy/<B>] }
+1. add      collection Set/dup-set-7c8b57255900e95f
+            members: [TicketProxy/<A>, TicketProxy/<B>]   (canonical-sorted)
+
+2. add      DuplicateAssertion/dup-set-7c8b57255900e95f
+            about: Set/dup-set-7c8b57255900e95f
             data: { migratedFrom: "DuplicateAssertion/dup-19101a0fcc30826d", reason, members[] }
 
-2. add      CertaintyOpinion/cert-set-7c8b57255900e95f
+3. add      CertaintyOpinion/cert-set-7c8b57255900e95f
             about: DuplicateAssertion/dup-set-7c8b57255900e95f
             data: { b: 0.7, d: 0.1, u: 0.2, a: 0.5,
                     migratedFrom: "CertaintyOpinion/cert-19101a0fcc30826d" }
 
-3. add      ReviewEvent/rev-set-7c8b57255900e95f
+4. add      ReviewEvent/rev-set-7c8b57255900e95f
             about: DuplicateAssertion/dup-set-7c8b57255900e95f
             data: { reviewer, note, certaintyBefore, certaintyAfter,
                     migratedFrom: "ReviewEvent/rev-19101a0fcc30826d" }
 
-4. retract  DuplicateAssertion/dup-19101a0fcc30826d
-5. retract  CertaintyOpinion/cert-19101a0fcc30826d
-6. retract  ReviewEvent/rev-19101a0fcc30826d
+5. retract  DuplicateAssertion/dup-19101a0fcc30826d
+6. retract  CertaintyOpinion/cert-19101a0fcc30826d
+7. retract  ReviewEvent/rev-19101a0fcc30826d
 ```
 
-Order matters: writes first (so the v2 backrefs are live before any retract executes), retractions last. **`wh commit submit` is not all-or-nothing on validation failure** — pre-validate the entire ops array against the v2 shapes before submitting (see Move 3 above), and verify post-commit state by reading back, not by trusting the exit code. With idempotent v2 names (Move 1), a partial-apply on one thing is safe to re-run.
+Order matters: the `Set` collection first (so the assertion's `about` wref resolves), then the
+writes (so the v2 backrefs are live before any retract executes), retractions last. **`wh commit submit` is not all-or-nothing on validation failure** — pre-validate the entire ops array against the v2 shapes before submitting (see Move 3 above), and verify post-commit state by reading back, not by trusting the exit code. With idempotent v2 names (Move 1), a partial-apply on one thing is safe to re-run.
 
-The hash `7c8b57255900e95f` is `sha256(sortedWrefs(A, B) + "DuplicateAssertion")[:16]`. Re-running the migration sees `DuplicateAssertion/dup-set-7c8b57255900e95f` already exists (`wh assertion view` returns the v2 assertion); the v1 assertion is already retracted; the entire 6-op block is a no-op.
+The hash `7c8b57255900e95f` is `sha256(sortedWrefs(A, B) + "DuplicateAssertion")[:16]`. The `Set` collection reuses the same member-derived hash, so both `Set/dup-set-7c8b57255900e95f` and `DuplicateAssertion/dup-set-7c8b57255900e95f` are deterministic. Re-running the migration sees the v2 assertion already exists (`wh assertion view` returns it) and the collection already pinned; the v1 assertion is already retracted; the entire 7-op block is a no-op (and `--skip-existing` collapses it cleanly).
 
 ---
 
@@ -164,13 +170,15 @@ if (!DRY_RUN && !COMMIT) {
 const v1Assertions = await wh.assertion.list({ shape: "DuplicateAssertion", repo });
 
 for (const v1 of v1Assertions) {
-  // Skip already-migrated things (the v1 about is the single-thing form;
-  // the v2 form has about: { set: [...] }).
+  // Skip already-migrated things (the v1 about is a single-thing wref;
+  // the v2 form's about resolves to a Set/... collection wref).
   if (isV2Arity(v1.about)) continue;
 
   // Reconstruct v2 members from v1 about + flat originalWref field.
   const members = sortedWrefs([v1.about, v1.data.originalWref]);
   const v2Hash = sha256(members.join(",") + "DuplicateAssertion").slice(0, 16);
+  const setName = `dup-set-${v2Hash}`;
+  const setWref = `Set/${setName}`;             // deterministic collection wref
   const v2Wref = `DuplicateAssertion/dup-set-${v2Hash}`;
 
   // Idempotency: skip if v2 already exists.
@@ -179,7 +187,9 @@ for (const v1 of v1Assertions) {
   // Enumerate dependents to cascade.
   const dependents = await wh.assertion.list({ about: v1.wref });
   const ops = [
-    addOp(v2Wref, members, { migratedFrom: v1.wref, ...v1.data }),
+    // about accepts a wref only — create the Set collection first, then point at it.
+    collectionOp('set', setName, members),
+    addOp(v2Wref, setWref, { migratedFrom: v1.wref, ...v1.data }),
     ...dependents.map(d => addOp(deriveV2Dep(d, v2Wref), v2Wref, {
       ...d.data, migratedFrom: d.wref,
     })),

@@ -12,12 +12,12 @@
 //                    field that names a wref (the DuplicateAssertion smell).
 //                    Does not walk endpoints or call wh thing about.
 //   default          2a + 2b. Samples assertions per shape, classifies aboutWref
-//                    (Pair / Triple / Set / List / single thing), and runs
+//                    (Pair / Set / List / single thing), and runs
 //                    independent reachability checks per endpoint:
 //                      (a) `wh thing about <endpoint> --resolve-collections
 //                          --shape <X> --all` returns this assertion.
 //                      (b) `wh thing refs <endpoint> --inbound --all` returns
-//                          the collection thing (for Pair/Triple/Set/List).
+//                          the collection thing (for Pair/Set/List).
 //                      (c) For every typed-wref data field on the assertion,
 //                          the target reports this assertion via `wh thing
 //                          refs <target> --inbound --all`. Covers single-about
@@ -164,12 +164,11 @@ function isWrefType(t) {
 //
 // Shape definitions do NOT declare `about` arity — it is observable only
 // from assertions' `aboutWref` strings. We classify by the wref's leading shape
-// segment: `Pair/...`, `Triple/...`, `Set/...`, `List/...`, or anything else.
+// segment: `Pair/...`, `Set/...`, `List/...`, or anything else.
 
 function classifyAboutWref(aboutWref) {
   if (typeof aboutWref !== 'string') return { kind: 'unknown' };
   if (aboutWref.startsWith('Pair/')) return { kind: 'pair' };
-  if (aboutWref.startsWith('Triple/')) return { kind: 'triple' };
   if (aboutWref.startsWith('Set/')) return { kind: 'set' };
   if (aboutWref.startsWith('List/')) return { kind: 'list' };
   return { kind: 'single' };
@@ -255,8 +254,48 @@ function hasThingsOfShape(shapeName) {
   return items.length > 0;
 }
 
-function viewThing(wref) {
-  return wh('thing', 'view', wref);
+function viewThing(wref, opts = {}) {
+  const extra = opts.dataMode ? ['--data-mode', opts.dataMode] : [];
+  return wh('thing', 'view', wref, ...extra);
+}
+
+function collectionMembers(wref) {
+  // The collection-domain op enumerates members directly, independent of
+  // whatever body size a generic thing-view read decides to return. Prefer
+  // this over reading the collection thing when it's available.
+  return wh('collection', 'members', wref, '--all');
+}
+
+function extractMemberWrefs(membersResult) {
+  const items = Array.isArray(membersResult) ? membersResult : (membersResult.items ?? membersResult.members ?? []);
+  return items
+    .map((m) => (typeof m === 'string' ? m : m?.wref ?? m?.id))
+    .filter((w) => typeof w === 'string')
+    .map(stripVersionSuffix);
+}
+
+// Large Set/List collections can come back from a generic `wh thing view`
+// read as a summary body (no `members`/`items` field materialized at all),
+// which makes collectEndpointWrefs() return zero endpoints and would
+// false-fail the four-direction test on a collection that's simply big, not
+// broken. Prefer `wh collection members` (the collection-domain op) to
+// enumerate endpoints; fall back to a forced full-data `wh thing view
+// --data-mode full` read only if that op errors, and if the body is *still*
+// summary-only, report "needs a full read" rather than mis-reporting zero
+// endpoints.
+function resolveCollectionEndpoints(aboutWref) {
+  try {
+    const endpoints = extractMemberWrefs(collectionMembers(aboutWref));
+    if (endpoints.length > 0) return { endpoints };
+  } catch {
+    // `wh collection members` unavailable/errored — fall through to the
+    // generic thing-view path below.
+  }
+  const collection = viewThing(aboutWref, { dataMode: 'full' });
+  if (collection?.dataMode === 'summary' || collection?.fullData === false) {
+    return { endpoints: [], needsFullRead: true };
+  }
+  return { endpoints: collectEndpointWrefs(collection) };
 }
 
 function aboutEndpoint(wref, shapeName) {
@@ -331,15 +370,13 @@ function checkDataWrefReachability(shape, asn) {
 
 function collectEndpointWrefs(collectionThing) {
   // Pair: { first, second }
-  // Triple: { first, second, third }
   // Set: { members: [...] }
   // List: { items: [...] }
   const d = collectionThing?.data ?? {};
   const out = [];
   if (typeof d.first === 'string') out.push(d.first);
   if (typeof d.second === 'string') out.push(d.second);
-  if (typeof d.third === 'string') out.push(d.third);
-  for (const arr of [d.members, d.items, d.elements]) {
+  for (const arr of [d.members, d.items]) {
     if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string') out.push(v);
   }
   return out.map(stripVersionSuffix);
@@ -416,7 +453,7 @@ function checkRuntimeOneShape(shape, items) {
       continue;
     }
 
-    // Pair / Triple / Set / List: resolve the collection thing, walk every endpoint,
+    // Pair / Set / List: resolve the collection thing, walk every endpoint,
     // and run two independent reachability checks per endpoint:
     //   1. `wh thing about <endpoint> --resolve-collections --shape <X>` returns
     //      this assertion. Failure here = the relationship is invisible from
@@ -425,20 +462,30 @@ function checkRuntimeOneShape(shape, items) {
     //      Failure here = the refs index has drifted; `thing about` may still
     //      work via aboutWref lookup but cross-cutting "what references this?"
     //      queries silently miss the relationship. Different bug class.
-    let collection;
+    let resolved;
     try {
-      collection = viewThing(aboutWref);
+      resolved = resolveCollectionEndpoints(aboutWref);
     } catch (e) {
       failures.push({ shape: shape.name, gate: '2b', reason: `wh thing view ${aboutWref} failed: ${e.message}` });
       continue;
     }
-    const endpoints = collectEndpointWrefs(collection);
+    const endpoints = resolved.endpoints;
     if (endpoints.length === 0) {
-      failures.push({
-        shape: shape.name,
-        gate: '2b',
-        reason: `collection ${aboutWref} (kind=${cls.kind}) yielded zero endpoint wrefs; cannot run four-direction test`,
-      });
+      if (resolved.needsFullRead) {
+        // Summary-only body even after a forced full-data read — this is a
+        // read-path limitation, not evidence the collection has zero
+        // members. Warn instead of false-failing the four-direction test.
+        warnings.push({
+          shape: shape.name,
+          reason: `collection ${aboutWref} (kind=${cls.kind}) returned a summary-only body even with --data-mode full; skipping the four-direction test for this collection instead of reporting zero endpoints`,
+        });
+      } else {
+        failures.push({
+          shape: shape.name,
+          gate: '2b',
+          reason: `collection ${aboutWref} (kind=${cls.kind}) yielded zero endpoint wrefs; cannot run four-direction test`,
+        });
+      }
       continue;
     }
     const collectionWrefNoVer = stripVersionSuffix(aboutWref);
@@ -511,7 +558,7 @@ async function main() {
   }
 
   const targets = shapes.filter((s) => !TARGET_SHAPE || s.name === TARGET_SHAPE);
-  const builtin = new Set(['Pair', 'Triple', 'Set', 'List']); // skip collection-builtins
+  const builtin = new Set(['Pair', 'Set', 'List']); // skip collection-builtins
   for (const shape of targets) {
     if (builtin.has(shape.name)) continue;
 

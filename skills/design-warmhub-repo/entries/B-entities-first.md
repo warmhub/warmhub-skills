@@ -51,8 +51,9 @@ If a relationship is between two things, the answer is almost never `about: <sin
 
 - **Pair** for directional 2-way relationships ("A blocks B" — A and B are different roles).
 - **Set** for symmetric 2-way or n-way relationships ("A and B are duplicates of each other" — order doesn't matter).
-- **Triple** for ordered 3-way (player + cell + item).
 - **List** for ordered sequences with possible duplicates.
+
+A genuine ordered 3-way relation (player + cell + item) is not one of the collection primitives — model it as a named domain shape/assertion whose name encodes the axes. Mechanical 3-way grouping without load-bearing order can use List or Set instead.
 
 Get this right *now*. `about` is immutable; arity changes after data lands require retract-and-replay.
 
@@ -110,7 +111,7 @@ If step 5 (the question-coverage audit) is making you delete more than half your
 
 If step 4 (descriptions) is hard because you're not sure what each shape is *for*, the domain isn't as concrete as you thought. Switch to **entry C (pattern-match)** to find a similar known-good design as a vocabulary anchor.
 
-If step 3 (`about` arity) is producing nonsense answers — e.g., a relationship has 4 endpoints and you can't decide between Triple and Set — pause and read [primitives.md § Collections](../../modeling-foundations/references/primitives.md#collections--pair-triple-set-list) carefully. The four collection types cover most cases; if none fits, you may have a multi-relationship situation that decomposes into multiple assertion shapes.
+If step 3 (`about` arity) is producing nonsense answers — e.g., a relationship has more endpoints than Pair or Set can express — pause and read [primitives.md § Collections](../../modeling-foundations/references/primitives.md#collections--pair-set-list) carefully. The three collection types cover most cases; if none fits, you likely have a genuine 3-or-more-way relation that wants a named domain shape/assertion rather than a collection primitive, or a multi-relationship situation that decomposes into multiple assertion shapes.
 
 ---
 

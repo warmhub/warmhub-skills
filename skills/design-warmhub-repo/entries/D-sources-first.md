@@ -63,7 +63,7 @@ Now the entry diverges from pure source modeling. With proxies in place, what cl
 - **Set-target assertions** for symmetric or n-way relationships ("these tickets are duplicates of each other").
 - **Cross-source assertions** linking proxies from different source families ("this commit addresses this ticket").
 
-Read [primitives.md](../../modeling-foundations/references/primitives.md) before continuing. The four-direction test must pass for every assertion shape; the arity choice (single thing / Pair / Set / Triple / List) is permanent because `about` is immutable.
+Read [primitives.md](../../modeling-foundations/references/primitives.md) before continuing. The four-direction test must pass for every assertion shape; the arity choice (single thing / Pair / Set / List) is permanent because `about` is immutable.
 
 Before promising a cross-source edge, run the join-feasibility check:
 
@@ -86,7 +86,7 @@ For domains where source identity is itself contested (e.g., "is this paper the 
 
 Only at this step do you start designing the *interesting* assertions — claims, hypotheses, decisions, certainty opinions, evidence chains. Each one targets one or more proxies via `about`. The proxy infrastructure from steps 1–4 is the substrate; the assertions are where the graph earns its complexity.
 
-For each new assertion shape, write down 1–3 questions it must enable. If the question requires field-string-match (e.g., "find all duplicates of issue X" using a flat `originalWref: string` field), the `about` arity is wrong. Use Pair / Set / Triple / List per primitives.md.
+For each new assertion shape, write down 1–3 questions it must enable. If the question requires field-string-match (e.g., "find all duplicates of issue X" using a flat `originalWref: string` field), the `about` arity is wrong. Use Pair / Set / List per primitives.md.
 
 ### 6. Diagnose the dimensions
 

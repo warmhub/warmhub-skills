@@ -10,7 +10,7 @@ The canonical reference is [docs.warmhub.ai data-modeling](https://docs.warmhub.
 
 A WarmHub graph earns its complexity over text search by enabling cheap multi-hop traversal in *both directions* on every load-bearing relationship. Every shape design either delivers that or breaks it — and breakage is permanent because `about` is immutable.
 
-Before defining any assertion shape, write down every question the graph must be able to answer about it. The `about` target — single thing, Pair, Triple, Set, or List — is whichever one makes those questions resolvable as **graph traversals**, not as field-string filters.
+Before defining any assertion shape, write down every question the graph must be able to answer about it. The `about` target — single thing, Pair, Set, or List — is whichever one makes those questions resolvable as **graph traversals**, not as field-string filters.
 
 ### The four-direction test
 
@@ -55,7 +55,7 @@ Resolution  ──about──▶  Pair[Vent, ResolutionTarget]
 | All unresolved vents about a FrictionTarget | `thing about FrictionTarget/Z --shape Vent` ⊖ vents in any Resolution Pair | ✓ derived |
 | All vents addressed by any fix on FrictionTarget Z | walk Z → Vent → Resolution → ResolutionTarget | ✓ 3-hop traversal |
 
-A single design choice — `about: { pair: [Vent, ResolutionTarget] }` — yields all four queries for free.
+A single design choice — a named Pair collection created by a prior op, then `about: "Pair/<name>"` — yields all four queries for free.
 
 ### Worked example: a duplicate-ticket graph's DuplicateAssertion (fails)
 
@@ -85,7 +85,7 @@ Same problem class as the vent-resolution example. Different design choice. Comp
 `about` is immutable. If you assert against the wrong target:
 
 1. Retract the bad assertion(s).
-2. Re-assert with the correct target (Pair / Set / Triple / List as appropriate).
+2. Re-assert with the correct target (Pair / Set / List as appropriate).
 
 The retracted assertions remain in version history but are hidden from default queries. This is workable when caught early; expensive when discovered after large data load.
 
@@ -135,7 +135,7 @@ From the docs:
 
 > **The `about` reference is set at creation and cannot be changed.** On revise, you can update the assertion's data, but never its about reference. If you assert about the wrong target by mistake, the recovery path is: retract the mis-targeted assertion, then create a new assertion pointing at the correct target.
 
-Why this matters for design: the `about` **arity** — whether an assertion is about a single thing, a Pair, a Triple, a Set, or a List — is *permanent for any data already written*. (We use *arity*, not "cardinality": this is the structure of the relationship the assertion makes, not a relational one-to-many count.) The four-direction test (above) must be run before data lands, not after.
+Why this matters for design: the `about` **arity** — whether an assertion is about a single thing, a Pair, a Set, or a List — is *permanent for any data already written*. (We use *arity*, not "cardinality": this is the structure of the relationship the assertion makes, not a relational one-to-many count.) The four-direction test (above) must be run before data lands, not after.
 
 ### `about` as the navigation axis
 
@@ -175,7 +175,7 @@ Use this disciplined retreat:
 3. **Record the retreat triple next to the shape and ingestion plan:**
    - accepted pitfall: the exact primitive the pipeline cannot currently emit;
    - migration trigger: the platform or connector capability that makes the real edge writable;
-   - re-derivable: the deterministic source fields needed to backfill the real Pair/Set/Triple/List.
+   - re-derivable: the deterministic source fields needed to backfill the real Pair/Set/List.
 4. **Plan the migration before loading volume.** The staged keys must be sufficient to derive stable
    relationship names later. When the trigger lands, replay into the approved primitive and remove the
    staging fields from new writes.
@@ -194,30 +194,37 @@ This is a context-free-legibility rule — mirror identifying data onto the asse
 
 ---
 
-## Collections — Pair, Triple, Set, List
+## Collections — Pair, Set, List
 
-WarmHub has four built-in collection types. They're auto-created on first use, version-pinned, idempotent (same members → same collection thing), and composable (collections can contain collections).
+WarmHub has three built-in collection types. They're auto-created on first use, version-pinned, idempotent (same members → same collection thing), and composable (collections can contain collections).
 
 | Type | Ordered? | Unique? | # of things | Field names | Use when… |
 |---|---|---|---|---|---|
 | **Pair** | yes | no | 2 | `first`, `second` | Directional binary relationship (A → B differs from B → A) |
-| **Triple** | yes | no | 3 | `first`, `second`, `third` | Ordered 3-way relationship (e.g., player + cell + item) |
 | **Set** | no | yes | 1+ | `members` | Symmetric or n-way relationship; order doesn't matter; no duplicates |
 | **List** | yes | no | 1+ | `items` | Ordered sequence with possible duplicates |
 
+For a genuine three-way relation, don't reach for a collection at all — model it as a named domain shape or assertion with its own fields. Reserve `set`/`list` for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing.
+
 ### Inline syntax
 
-The `about` field on assertions accepts either a wref string or a tagged collection object:
+`about` accepts a **wref string only.** There is no inline tagged-object sugar (`{ pair: [...] }`, `{ set: [...] }`, `{ list: [...] }`) — the write pipeline rejects it. To assert about a collection, create the named collection first with its own `add` operation, then point `about` at the resulting wref:
 
-```js
-about: "Location/A"                                          // single thing
-about: { pair: ["Location/A", "Location/B"] }                // Pair
-about: { triple: ["Player/alice", "Cell/1-1", "Item/g"] }    // Triple
-about: { set: ["Cell/0-0", "Cell/0-1", "Cell/1-0"] }         // Set
-about: { list: ["Cell/0-0", "Cell/0-1", "Cell/0-0"] }        // List
+```bash
+wh commit submit --ops '[
+  {"operation": "add", "kind": "collection", "type": "pair", "name": "vent-resolution-x", "members": ["Vent/X", "Workaround/Y"]},
+  {"operation": "add", "kind": "assertion", "name": "Resolution/vent-x", "about": "Pair/vent-resolution-x", "data": {}}
+]' -m "Add vent resolution"
 ```
 
-Each tagged object has exactly one key.
+```js
+about: "Location/A"           // single thing
+about: "Pair/vent-resolution-x"   // Pair, created by a prior collection op
+about: "Set/cell-adjacency-0-0-0-1"  // Set, created by a prior collection op
+about: "List/cell-path-a"     // List, created by a prior collection op
+```
+
+Valid collection `type` values on the `add`/`kind: "collection"` op are only `pair`, `set`, and `list`. Collection names must not contain `+`; use a readable slug instead.
 
 ### Querying through collections
 
@@ -230,16 +237,18 @@ wh thing about Location/A --resolve-collections # also includes Pair/Set/etc. co
 
 Collection resolution is HEAD-only — it finds collections that currently contain the thing. It does not resolve historical memberships.
 
-This is the critical operational caveat: a graph can be designed correctly with `about: { pair: [...] }` and still appear empty from an endpoint's side if the query forgets `--resolve-collections`. Document this in shape descriptions and tooling expectations.
+This is the critical operational caveat: a graph can be designed correctly with `about` referencing a named Pair collection (`about: "Pair/<name>"`) and still appear empty from an endpoint's side if the query forgets `--resolve-collections`. Document this in shape descriptions and tooling expectations.
 
 ### Pair vs Set: directional vs symmetric
 
 ```js
 // Directional: alice's trust of bob is not the same as bob's trust of alice
-about: { pair: ["Player/alice", "Player/bob"] }, data: { trust: 0.8 }
+// (named Pair collection ["Player/alice", "Player/bob"] created by a prior op)
+about: "Pair/<trust-name>", data: { trust: 0.8 }
 
 // Symmetric: adjacency is undirected — {A, B} = {B, A}
-about: { set: ["Cell/0-0", "Cell/0-1"] }, data: { kind: "neighbor" }
+// (named Set collection ["Cell/0-0", "Cell/0-1"] created by a prior op)
+about: "Set/<adjacency-name>", data: { kind: "neighbor" }
 ```
 
 Use Pair when (A, B) is meaningfully different from (B, A). Use Set when {A, B} should produce one collection regardless of order.
@@ -249,7 +258,9 @@ Use Pair when (A, B) is meaningfully different from (B, A). Use Set when {A, B} 
 Collections are things, so they can be members of other collections:
 
 ```js
-about: { pair: ["Pair/Location/Av1+Bv1", "Pair/Location/Cv1+Dv1"] }   // pair of pairs
+// Pair/location-ab and Pair/location-cd are themselves named Pair collections
+// created by prior ops; the outer Pair collection is created from those two wrefs
+about: "Pair/<outer-name>"   // pair of pairs, e.g. Pair/location-ab-cd containing [Pair/location-ab, Pair/location-cd]
 ```
 
 Useful for hierarchical or nested relationships, but pay the readability cost — multi-level composition can be hard to follow without good descriptions.
@@ -258,11 +269,11 @@ Useful for hierarchical or nested relationships, but pay the readability cost �
 
 ## Context-Free Legibility (mirrored fields)
 
-When `about` is a Pair / Set / Triple / List, context-free readers traversing the graph need help understanding what the assertion is *about* without resolving the collection's members. Mirror the practical traversal fields onto the assertion:
+When `about` is a Pair / Set / List, context-free readers traversing the graph need help understanding what the assertion is *about* without resolving the collection's members. Mirror the practical traversal fields onto the assertion:
 
 ```js
-// Native traversal target
-about: { pair: ["ReviewedClaim/X", "ExternalSourceReference/arxiv-2601.03192"] }
+// Native traversal target — named Pair collection created by a prior op
+about: "Pair/<basis-name>"   // e.g. Pair/reviewedclaim-x-arxiv-2601-03192, over ["ReviewedClaim/X", "ExternalSourceReference/arxiv-2601.03192"]
 
 // Mirrored fields on the assertion's data (context-free legibility)
 data: {
@@ -280,7 +291,7 @@ The native Pair traversal stays — but the mirrored fields make the assertion l
 
 ## BDU and the binomial-opinion constraint
 
-**BDU** is shorthand for **belief / disbelief / uncertainty** — a *subjective-logic opinion triple*, sometimes written `(b, d, u, α)` with a base-rate prior `α`. It's WarmHub's canonical way of attaching per-assertion uncertainty: how strongly an assertion is believed true, how strongly disbelieved, residual uncertainty that doesn't commit either way, and the base rate. Throughout this skill, **"BDU on assertion truth"** means the triple lives on the assertion itself; **"BDU on edges"** means it lives on a relationship assertion (one whose `about` is a Pair / Set / Triple / List of things).
+**BDU** is shorthand for **belief / disbelief / uncertainty** — a *subjective-logic opinion triple*, sometimes written `(b, d, u, α)` with a base-rate prior `α`. It's WarmHub's canonical way of attaching per-assertion uncertainty: how strongly an assertion is believed true, how strongly disbelieved, residual uncertainty that doesn't commit either way, and the base rate. Throughout this skill, **"BDU on assertion truth"** means the triple lives on the assertion itself; **"BDU on edges"** means it lives on a relationship assertion (one whose `about` is a Pair / Set / List of things).
 
 From the docs:
 

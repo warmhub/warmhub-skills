@@ -42,7 +42,7 @@ For each assertion shape that represents a relationship between two or more thin
 3. **Aggregation.** Can `wh assertion list --shape <Foo>` find all assertions of this type without filtering by string fields?
 4. **Derived rollups.** Do the questions you'll want to ask of *combinations* (e.g. "vents addressed by any workaround") fall out as multi-hop traversals, or do they require post-hoc set logic on flat fields?
 
-**What 2a "passes" looks like.** Every load-bearing question for the assertion is a graph operation. The shape's `about` arity (single thing / Pair / Triple / Set / List) is whichever one makes all four directions work.
+**What 2a "passes" looks like.** Every load-bearing question for the assertion is a graph operation. The shape's `about` arity (single thing / Pair / Set / List) is whichever one makes all four directions work.
 
 Run the same 2a walk on every `[F]` future-shape query in the question catalog. Record the eventual
 arity as a future contract, for example `[F] DuplicateAssertion about Set<TicketProxy>`. Do not write
@@ -64,10 +64,10 @@ For each relationship that passed 2a, confirm against populated data:
 3. Verify every direction returns the expected assertions when a pair instance exists.
 4. Fail-loud on any direction returning empty for a known pair.
 
-The script at [`build-warmhub-repo/scripts/verify-relationships.mjs`](../../build-warmhub-repo/scripts/verify-relationships.mjs) (run without `--dry-run`) performs the 2b walk for a populated repo. It samples assertions per shape, classifies each one's `aboutWref` (Pair / Triple / Set / List / single thing), then runs three independent reachability checks:
+The script at [`build-warmhub-repo/scripts/verify-relationships.mjs`](../../build-warmhub-repo/scripts/verify-relationships.mjs) (run without `--dry-run`) performs the 2b walk for a populated repo. It samples assertions per shape, classifies each one's `aboutWref` (Pair / Set / List / single thing), then runs three independent reachability checks:
 
 1. **`wh thing about <endpoint> --resolve-collections --shape <X> --all`** must return the assertion from every endpoint. This is the four-direction test on the about-target side. (For collection-targeted relationships, endpoints come from `wh thing view <aboutWref>`; for single-about, the endpoint is just the about-target.)
-2. **`wh thing refs <endpoint> --inbound --all`** must return the collection thing (for Pair / Triple / Set / List relationships). This is the empirical typed-wref check from issue A2: a flat-string-encoded endpoint would silently miss this even if check 1 passes via aboutWref lookup. Different bug class.
+2. **`wh thing refs <endpoint> --inbound --all`** must return the collection thing (for Pair / Set / List relationships). This is the empirical typed-wref check from issue A2: a flat-string-encoded endpoint would silently miss this even if check 1 passes via aboutWref lookup. Different bug class.
 3. **For every typed-wref field on the assertion's data**, the target reports the assertion via `wh thing refs <target> --inbound --all`. Catches the non-collection case: single-about shapes that carry typed wref fields in their data pointing at additional endpoints (e.g. `Violation` about `EnforcementCase` with `documentedByInspections: wref[]` — the about check covers `EnforcementCase`, this check covers each `Inspection`).
 
 All three calls paginate via `--all` so high-degree endpoints don't false-fail. Suggested defaults: sample 10 instances per shape; pass-rate threshold 100% (arity bugs are not amenable to "most of them work"). **Cross-repo caveat:** for any relationship that crosses a repo boundary, the reverse check must use `wh thing refs --inbound` (cross-repo), never `wh thing about` (repo-local) — the latter false-fails at the boundary and would wrongly flag a correctly-designed typed-wref-field relationship. Default `--sample-size 10` is a smoke sample; raise it for higher-confidence runs.
@@ -80,7 +80,7 @@ All three calls paginate via `--all` so high-degree endpoints don't false-fail. 
 
 This is the dangerous question — `about` is immutable. The recovery path is **retract the bad assertions and re-assert with the correct arity**. The retracted assertions remain in version history but are hidden from default queries. If you catch this before any data is loaded (clean 2a), change the shape design and proceed; if data is already loaded (failed 2b), plan a retract-and-replay migration with cascade through dependent assertions — see [`migrations.md`](../../build-warmhub-repo/references/migrations.md) for the discipline.
 
-A `DuplicateAssertion` (`about: subjectWref` + `originalWref: string`) is the canonical failure of this gate. A `Resolution` (`about: { pair: [Vent, ResolutionTarget] }`) is the canonical pass.
+A `DuplicateAssertion` (`about: subjectWref` + `originalWref: string`) is the canonical failure of this gate. A `Resolution` (`about: "Pair/<name>"`, the Pair created by a prior named `kind:"collection"` op) is the canonical pass.
 
 See [primitives.md § Traversability Contract](../../modeling-foundations/references/primitives.md) for the full rule.
 
@@ -91,13 +91,13 @@ See [primitives.md § Traversability Contract](../../modeling-foundations/refere
 **The test.** Walk each shape and check:
 
 - **Thing or assertion?** Per docs.warmhub.ai: things are entities with a single canonical state ("if there's one truth about this entity, it's a thing"); assertions are claims with attribution, confidence, or multiple perspectives. A lookup table is a thing; an agent's assessment is an assertion.
-- **Collection where appropriate?** Symmetric relationship → `Set`. Directional 2-way → `Pair`. Ordered 3-way → `Triple`. Variable-size with duplicates allowed → `List`. Single-target → no collection.
+- **Collection where appropriate?** Symmetric relationship → `Set`. Directional 2-way → `Pair`. Variable-size with duplicates allowed → `List`. Single-target → no collection. A genuine ordered 3-way relation is not a collection primitive — model it as a named domain shape/assertion; mechanical 3-way grouping without ordering semantics can use `Set` or `List` instead.
 - **Identifying data in the payload?** Even when `about` is set, the assertion's data should include enough identifying information to be self-describing without resolving the about target.
 - **Atomic ops where create-then-assert is needed?** `about` targets must exist at commit time. Use `--ops` to create both the target thing and the assertion in one write.
 - **BDU only on binary propositions.** Subjective-logic `(b, d, u, α)` opinions require true/false claims (binomial-opinion constraint per docs). For non-binary uncertainty, use a separate confidence-bearing assertion shape, not a BDU triple shoehorned onto a continuous concept. If multiple independent sources need reputation-weighted consensus over the same binary propositions, verify the design with [../../veritas-design/SKILL.md](../../veritas-design/SKILL.md) instead of hand-rolling fusion or trust weighting.
 - **Field types use the pinned vocabulary.** Scalars are `string`, `number`, `boolean`, and `wref`; multi-valued fields use native array declarations; optional fields use the `?` suffix. Record any field form that is new to the project so the build stage can live-verify it before adoption. Local-green is not live-green.
 
-**What "passes" looks like.** Each shape's choice of (thing vs assertion) and (single-target vs Pair / Triple / Set / List) is justified by the four-direction test. BDU appears only where binary propositions are being modeled.
+**What "passes" looks like.** Each shape's choice of (thing vs assertion) and (single-target vs Pair / Set / List) is justified by the four-direction test. BDU appears only where binary propositions are being modeled.
 
 **What "fails" looks like.** Static reference data (country codes, lookup categories) is being modeled as assertions when no one will ever ask "who said this?" Or: a continuous-relevance edge carries a BDU triple that nobody can interpret consistently.
 
@@ -115,7 +115,7 @@ and confirm each rule applies to the design:
 - Every shape has a non-trivial `description`. Every field has a non-trivial `description`. `describeRepo` would teach a context-free agent how to ask correct questions about the graph.
 - Append-only revision: status moves are reflected in certainty / basis / review events / decisions, not in deletion or mutation of prior assertions.
 - No durable debt-shapes (`ReviewDebt`, `NeedsSupport`, `BestReviewTarget`). Those are queries.
-- Where `about` is a Pair/Set/Triple/List, mirrored convenience fields (subject wref, object wref, kind, identity-key) are added onto the assertion for context-free reader legibility.
+- Where `about` is a Pair/Set/List, mirrored convenience fields (subject wref, object wref, kind, identity-key) are added onto the assertion for context-free reader legibility.
 - Stale-verdict retraction discipline if your domain has expensive derivations (D3=expensive in `dimensions.md`): every derived verdict carries a content-addressed policy/mechanism wref so a policy change can retract affected verdicts cleanly.
 - Verify-before-encoding: no shape encodes a belief about a platform mechanism (resolution scope, validation scope, field-type support, index behavior) that wasn't actually run. If a cross-repo relationship is in scope, the cross-repo reverse-traversal behavior was probed, not assumed. See [`design-rules.md` § Verify Platform Mechanisms Before Encoding](../../modeling-foundations/references/design-rules.md).
 - Cross-repo linkage (if any relationship crosses a repo boundary): the link is a typed wref field on the join-key-owning side (not reverse `about`); no unresolved raw string sits in a wref-typed field; the unresolved-target policy and the target-retraction / identity-merge / stable-join-key prompts are answered. See [`cross-repo-linkage.md`](../../modeling-foundations/references/cross-repo-linkage.md).

@@ -12,8 +12,8 @@
       "files": [],
       "purpose": "Baseline recall test. Fingerprint #11 (External-Proxy Analysis Graph) is the natural match for a ticket corpus. This prompt SHOULD produce a clean design — failing here would mean the skill can't even retrieve, let alone apply.",
       "assertions": [
-        {"text": "Design uses `about: { set: [...] }` for the duplicate-of relationship (symmetric)", "type": "auto"},
-        {"text": "Design uses `about: { pair: [blocker, blocked] }` for the blocks relationship (directional)", "type": "auto"},
+        {"text": "Design uses `about: \"Set/<name>\"` (named collection op first) for the duplicate-of relationship (symmetric)", "type": "auto"},
+        {"text": "Design uses `about: \"Pair/<name>\"` (named collection op first) for the blocks relationship (directional)", "type": "auto"},
         {"text": "TicketProxy is modeled as a Thing (entity with single canonical state), not as an assertion", "type": "manual"},
         {"text": "Design includes a content-addressed AnalyticalPolicy (or equivalent named shape) with policyWref bindings on expensive analytical assertions", "type": "manual"},
         {"text": "Design includes an anti-shapes / anti-queries section listing 'stale tickets', 'high-entropy', and 'needs triage' as derived queries, not durable shapes", "type": "manual"},
@@ -33,8 +33,8 @@
       "files": [],
       "purpose": "THE OVERFIT DETECTOR. Same fingerprint as prompt 1 (#11) but vocabulary doesn't trigger catalog name-match (no ticket corpus, no duplicate clusters). If the skill produces a design with the same Pair/Set choices, content-addressed policy, anti-shapes section, and question catalog format — principles transferred. If it produces something noticeably worse, name-matching was doing more work than principle-application.",
       "assertions": [
-        {"text": "Design uses `about: { set: [...] }` for the same-underlying-vulnerability relationship (symmetric — A is same as B is same as A)", "type": "auto"},
-        {"text": "Design uses `about: { pair: [vulnerability, incident] }` (or analogous) for the exploited-in / caused-by relationship (directional)", "type": "auto"},
+        {"text": "Design uses `about: \"Set/<name>\"` (named collection op first) for the same-underlying-vulnerability relationship (symmetric — A is same as B is same as A)", "type": "auto"},
+        {"text": "Design uses `about: \"Pair/<name>\"` (named collection op first, or analogous) for the exploited-in / caused-by relationship (directional)", "type": "auto"},
         {"text": "Vulnerability reports / canonical vulnerabilities / incidents are modeled as external-proxy Things, not as assertions", "type": "manual"},
         {"text": "Design includes content-addressed analytical-policy shape bound to dedupe-across-sources verdicts (expensive derivation justifies it per D3)", "type": "manual"},
         {"text": "Design lists 'triage queue' and 'blast radius' as derived queries, not as durable shapes (no TriageItem/BlastRadiusScore shape)", "type": "manual"},
@@ -60,9 +60,9 @@
         {"text": "Design articulates the interface shape(s) bridging the per-channel proxy layer and the theme-synthesis layer (per the layered-co-fingerprints pattern in catalog)", "type": "manual"},
         {"text": "Channel-specific feedback (FeedbackProxy or per-channel subtypes) modeled as external proxies — Things, not assertions", "type": "manual"},
         {"text": "Theme synthesis uses content-addressed AnalyticalPolicy / ClusteringPolicy shape (D3=expensive)", "type": "manual"},
-        {"text": "Cross-channel duplicate-complaint relationship uses `about: { set: [...] }` (symmetric)", "type": "auto"},
-        {"text": "Blocker relationship uses `about: { pair: [blocker, blocked] }` (directional)", "type": "auto"},
-        {"text": "Theme-membership uses `about: { pair: [FeedbackProxy, ThemeHypothesis] }` or analogous Pair (with mirrored convenience fields)", "type": "auto"},
+        {"text": "Cross-channel duplicate-complaint relationship uses `about: \"Set/<name>\"` (named collection op first, symmetric)", "type": "auto"},
+        {"text": "Blocker relationship uses `about: \"Pair/<name>\"` (named collection op first, directional)", "type": "auto"},
+        {"text": "Theme-membership uses `about: \"Pair/<name>\"` or analogous Pair (named collection op first, with mirrored convenience fields)", "type": "auto"},
         {"text": "Investment-priority-ranking is treated as a derived query (aggregation over Theme + complaint counts), NOT as a durable InvestmentRanking/PriorityShape shape", "type": "manual"},
         {"text": "Design does NOT collapse the layering by ignoring either pattern-mining or external-proxy aspects", "type": "manual"},
         {"text": "Design walks convergence checkpoint", "type": "manual"}
@@ -79,8 +79,8 @@
       "assertions": [
         {"text": "Design correctly does NOT pattern-match to ops-state-tracking (#4) despite messaging-platform vocabulary", "type": "manual"},
         {"text": "Design includes graph-synthesized concept (RecurringQuestionPattern, QuestionCluster, or similar) as a Thing — not just message proxies", "type": "manual"},
-        {"text": "Best-answer relationship uses `about: { pair: [Answer, Question] }` or analogous Pair (directional: answers-are-of)", "type": "auto"},
-        {"text": "Same-question relationship uses `about: { set: [...] }` (symmetric)", "type": "auto"},
+        {"text": "Best-answer relationship uses `about: \"Pair/<name>\"` or analogous Pair (named collection op first, directional: answers-are-of)", "type": "auto"},
+        {"text": "Same-question relationship uses `about: \"Set/<name>\"` (named collection op first, symmetric)", "type": "auto"},
         {"text": "Design diagnoses fingerprint as a hybrid (pattern-mining + external-proxy + curation), not a single match", "type": "manual"},
         {"text": "MessageProxy / ThreadProxy treated as external proxies (Things with stable Slack message id), not as assertions or as bytes the graph owns", "type": "manual"},
         {"text": "Design includes content-addressed policy shape if pattern-recognition / question-clustering uses expensive derivation", "type": "manual"},
@@ -111,12 +111,11 @@
   ],
 
   "auto_assertion_grading_hints": {
-    "auto_pattern_about_set": "Output contains the substring `about: { set:` or `about: {set:` (regex with optional whitespace).",
-    "auto_pattern_about_pair": "Output contains the substring `about: { pair:` or `about: {pair:`.",
-    "auto_pattern_about_triple": "Output contains the substring `about: { triple:` or `about: {triple:`.",
+    "auto_pattern_about_set": "Output contains the substring `about: \"Set/` or `about: 'Set/` (named collection op referenced by name; regex with optional whitespace).",
+    "auto_pattern_about_pair": "Output contains the substring `about: \"Pair/` or `about: 'Pair/` (named collection op referenced by name).",
     "auto_pattern_question_catalog_status": "Output contains `[R]`, `[M]`, or `[F]` status markers in a query catalog context.",
     "auto_pattern_earns_pressure": "Output contains the phrase `Earns pressure for:` or `earns pressure for`.",
-    "auto_pattern_no_flat_string_wref": "Output does NOT contain a pattern like `<endpointName>Wref: string` (e.g. `originalWref: string`, `blockerWref: string`) used to encode a relationship endpoint as a flat field. Detection: regex match for `[A-Za-z]+Wref\\s*:\\s*string` followed by absence of a corresponding `about: \\{ (pair|set|triple|list)` — failure if found WITH no Pair/Set/Triple/List target on the same shape.",
+    "auto_pattern_no_flat_string_wref": "Output does NOT contain a pattern like `<endpointName>Wref: string` (e.g. `originalWref: string`, `blockerWref: string`) used to encode a relationship endpoint as a flat field. Detection: regex match for `[A-Za-z]+Wref\\s*:\\s*string` followed by absence of a corresponding named-collection reference `about: \"(Pair|Set|List)/` — failure if found WITH no Pair/Set/List target on the same shape.",
     "auto_pattern_anti_shapes_section": "Output contains a section heading or list explicitly labeled 'anti-shapes', 'queries not shapes', 'derived queries', or equivalent."
   },
 

@@ -27,3 +27,19 @@ Initial public skills snapshot.
 - veritas-design: 7fcefdf6..5d8361f0
 - warmhub-builder: 7fcefdf6..5d8361f0
 - wh-commit-design: 7fcefdf6..5d8361f0
+
+## 2026-07-09 — promotion
+
+- add-warmhub-component: added 00188190
+- build-warmhub-collector: added 00188190
+- build-warmhub-display: added 00188190
+- build-warmhub-repo: added 00188190
+- connect-warmhub-app: added 00188190
+- design-warmhub-repo: added 00188190
+- discover-warmhub-repo: added 00188190
+- find-self-verifying-objectives: added 00188190
+- modeling-foundations: added 00188190
+- plan-warmhub-ingestion: added 00188190
+- veritas-design: added 00188190
+- warmhub-builder: added 00188190
+- wh-commit-design: added 00188190

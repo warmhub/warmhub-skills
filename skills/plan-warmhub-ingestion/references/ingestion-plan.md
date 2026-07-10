@@ -25,7 +25,7 @@ Use this contract for `ingestion` in `.warmhub-builder/project-state.json`.
     "deferredPrimitives": [
       {
         "relationship": "query/shape that needs the future primitive",
-        "approvedPrimitive": "pair | set | triple | list | typed-wref | wref-array",
+        "approvedPrimitive": "pair | set | list | typed-wref | wref-array",
         "stagedFields": ["plain string raw keys or id hints"],
         "acceptedPitfall": "write path cannot emit the primitive yet",
         "migrationTrigger": "capability or connector change that unlocks the real edge",
