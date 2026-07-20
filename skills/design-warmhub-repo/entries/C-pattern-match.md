@@ -45,7 +45,7 @@ against the destination repo.
 
 Read [primitives.md](../../modeling-foundations/references/primitives.md). Every shape you're about to translate uses Things, Assertions, and Collections — and the arity choices in the source repo were made for that repo's question set. Don't carry them over without re-running the four-direction test for *your* questions.
 
-In particular: if the source repo targets a Pair (`about: "Pair/<name>"` referencing a named collection op) for some relationship, ask whether *your* version of that relationship is also directional. If not, change Pair to Set before any data lands. `about` is immutable.
+In particular: if the source repo targets a legacy Pair, do not copy it into a new model. Choose Arc for a directional relationship, Bond for a symmetric binary relationship, or Set for a larger symmetric group before any data lands. `about` is immutable.
 
 ### 4. Translate vocabulary, not concepts
 
@@ -81,7 +81,7 @@ Read [pitfalls.md](../../modeling-foundations/references/pitfalls.md). For patte
 
 - **Fast.** Translating from a known-good design is faster than greenfield design.
 - **Inherits hard-won lessons.** The source repo's design choices already encode lessons learned in its domain. You inherit those for free if the fingerprints match.
-- **Lower invention cost.** You don't have to re-derive structural patterns (review event vs critique, Pair vs Set, etc.).
+- **Lower invention cost.** You don't have to re-derive structural patterns (review event vs critique, Arc vs Bond vs Set, etc.).
 
 ## What this entry costs you
 

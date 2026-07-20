@@ -79,7 +79,7 @@ Before designing the shape that would unblock an `[F]` query, walk through the [
 3. As an aggregation across the assertion type?
 4. As a derived rollup combining hops?
 
-If any direction would need a field-string-match, the `about` arity you're imagining is wrong. Choose Pair / Set / List per the rules in primitives.md *before* writing the shape.
+If any direction would need a field-string-match, the `about` arity you're imagining is wrong. Choose Arc / Bond / Set / List per the rules in primitives.md *before* writing the shape.
 
 ### 5. Now diagnose the dimensions
 
@@ -91,7 +91,7 @@ Open [pattern-catalog.md](../references/pattern-catalog.md). Match the closest f
 
 ### 7. Apply the universal foundations
 
-Read [design-rules.md](../../modeling-foundations/references/design-rules.md). Apply each rule. Hierarchical naming, descriptions on every shape and field, append-only revision, no debt-shapes, context-free legibility where Pair/Set targets are used.
+Read [design-rules.md](../../modeling-foundations/references/design-rules.md). Apply each rule. Hierarchical naming, descriptions on every shape and field, append-only revision, no debt-shapes, context-free legibility where collection targets are used.
 
 ### 8. Walk pitfalls and reach the checkpoint
 

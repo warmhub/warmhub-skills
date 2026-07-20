@@ -29,28 +29,11 @@ Notes:
 - `webhookUrl` must be a public HTTPS endpoint (no localhost / private IPs)
 - keep names stable and scoped, e.g. `incident/process-event`
 
-## Cron Subscription
+## Scheduled Work
 
-Use for scheduled syncs or maintenance work. Minimum interval is 5 minutes.
-
-```json
-{
-  "subscriptions": [
-    {
-      "name": "incident/nightly-digest",
-      "trigger": {
-        "kind": "cron",
-        "cronspec": "0 6 * * *",
-        "timezone": "UTC"
-      },
-      "webhookUrl": "https://handler.example.com/incident/nightly"
-    }
-  ]
-}
-```
-
-WarmHub fires cron subscriptions on schedule and delivers an `event: "warmhub.cron"` POST to the
-`webhookUrl` automatically.
+For scheduled syncs or maintenance, configure an external scheduler you operate to call the
+deployed handler directly. Do not declare a cron subscription: WarmHub only supports webhook
+subscriptions. Authenticate the scheduler request with the handler's own access controls.
 
 ## Credentials On Subscriptions
 
@@ -80,8 +63,7 @@ Declare the subscriptions that must exist and how teardown should treat them.
   "health": {
     "requires": {
       "subscriptions": [
-        "incident/process-event",
-        "incident/nightly-digest"
+        "incident/process-event"
       ]
     }
   },

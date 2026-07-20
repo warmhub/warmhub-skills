@@ -18,7 +18,7 @@ Inspect the repo and capture:
 - what code already exists that should run as the webhook handler
 - whether the repo is public or private
 - whether it already has scripts/commands that can be invoked per delivery by a handler endpoint
-- whether it needs config, secrets, cron, or event triggers
+- whether it needs config, secrets, scheduled work, or event triggers
 - where the handler can be deployed and what its public HTTPS URL will be
 
 ## Step 2: Pick The Lightest Component Pattern
@@ -27,7 +27,7 @@ Map the repo to one of these:
 - seed-only package
 - public reactive component
 - private / secret-backed component
-- cron / mixed component
+- scheduled / mixed component
 
 Do not invent extra manifest sections the repo does not need.
 
@@ -47,7 +47,8 @@ Translate the repo into declarative resources:
 - existing schemas or domain entities -> `shapes`
 - existing config or bootstrap data -> `seeds`
 - existing worker scripts / commands -> the deployed webhook handler behind a `webhookUrl`
-- existing webhooks or timers -> `subscriptions` (event or cron trigger + `webhookUrl`)
+- existing webhooks -> event `subscriptions`
+- existing timers -> an external scheduler calling the deployed handler directly
 - inbound delivery auth -> a `credentials` set with `WEBHOOK_*` keys bound via `subscription.credentials`
 
 If the repo already has a worker command, wrap it behind an HTTPS endpoint rather than introducing a
@@ -63,7 +64,7 @@ Write the full manifest. Include empty arrays/objects for unused sections. Point
 `webhookUrl` at the endpoint where the handler is (or will be) deployed.
 
 The worker command itself (`npm run worker`, `bun src/index.ts`, `bash scripts/run.sh`, …) becomes
-the handler your endpoint invokes per delivery — it is no longer named in the manifest.
+the handler your endpoint invokes per delivery — it is not named in the manifest.
 
 ## Step 7: Add Or Adapt Handler Code
 

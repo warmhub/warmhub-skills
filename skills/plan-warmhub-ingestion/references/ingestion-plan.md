@@ -8,7 +8,7 @@ Use this contract for `ingestion` in `.warmhub-builder/project-state.json`.
     "sources": [
       {
         "name": "source name",
-        "kind": "api | file | webhook | cron-pull | human-collection | warmhub-repo | mixed",
+        "kind": "api | file | webhook | cron-pull (external scheduler you run) | human-collection | warmhub-repo | mixed",
         "access": "auth, URL, upload, subscription, or manual source description",
         "sourceSample": "header/payload inspected and where it was recorded",
         "mapsTo": ["ShapeName"],
@@ -25,7 +25,7 @@ Use this contract for `ingestion` in `.warmhub-builder/project-state.json`.
     "deferredPrimitives": [
       {
         "relationship": "query/shape that needs the future primitive",
-        "approvedPrimitive": "pair | set | list | typed-wref | wref-array",
+        "approvedPrimitive": "arc | bond | set | list | typed-wref | wref-array",
         "stagedFields": ["plain string raw keys or id hints"],
         "acceptedPitfall": "write path cannot emit the primitive yet",
         "migrationTrigger": "capability or connector change that unlocks the real edge",
@@ -34,7 +34,7 @@ Use this contract for `ingestion` in `.warmhub-builder/project-state.json`.
     ],
     "automation": [
       {
-        "kind": "cron | webhook | manual | collector",
+        "kind": "cron (external scheduler you run) | webhook | manual | collector",
         "purpose": "ingest | qc | maintenance",
         "credentials": "required credential set or none"
       }
@@ -62,7 +62,7 @@ Planning checklist:
   write canonical semantic fields for matching/grouping, and record the mapping policy or version
   that produced each derived value.
 - Human collection has validation, provenance, moderation or QC, and retry behavior.
-- Webhook and cron automation include inbound credential needs.
+- Webhook subscriptions and external schedulers state the handler authentication they need.
 - Backfill is bounded unless there is a resumable checkpoint plan.
 - QC covers completeness, ranges, totals, source freshness, and provenance where relevant.
 - Provenance captures source identity, actor or collector identity, raw/derived mapping policy, and

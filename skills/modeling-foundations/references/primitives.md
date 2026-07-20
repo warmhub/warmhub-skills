@@ -2,7 +2,7 @@
 
 This file is foundational. Every entry path in this skill assumes you understand the four primitives and the traversability contract. If you do, skim. If you don't, read end-to-end before picking an entry.
 
-The canonical reference is [docs.warmhub.ai data-modeling](https://docs.warmhub.ai/data-modeling/overview/). This file lifts the rules that designers most often need at design time, plus the *judgment layer* the docs don't fully cover (when single vs Pair vs Set; when assertions vs things; what to do when bidirectional traversability seems to require both endpoints to be queryable).
+The canonical reference is [docs.warmhub.ai data-modeling](https://docs.warmhub.ai/data-modeling/overview/). This file lifts the rules that designers most often need at design time, plus the *judgment layer* the docs don't fully cover (when single vs Arc/Bond/Set; when assertions vs things; what to do when bidirectional traversability seems to require both endpoints to be queryable).
 
 ---
 
@@ -10,7 +10,7 @@ The canonical reference is [docs.warmhub.ai data-modeling](https://docs.warmhub.
 
 A WarmHub graph earns its complexity over text search by enabling cheap multi-hop traversal in *both directions* on every load-bearing relationship. Every shape design either delivers that or breaks it — and breakage is permanent because `about` is immutable.
 
-Before defining any assertion shape, write down every question the graph must be able to answer about it. The `about` target — single thing, Pair, Set, or List — is whichever one makes those questions resolvable as **graph traversals**, not as field-string filters.
+Before defining any assertion shape, write down every question the graph must be able to answer about it. The `about` target — single thing, Arc, Bond, Set, or List — is whichever one makes those questions resolvable as **graph traversals**, not as field-string filters.
 
 ### The four-direction test
 
@@ -34,15 +34,15 @@ Forward resolution is *not* the problem: an `about` target (or a wref field) may
 
 The design consequence:
 
-- **Same-repo relationship** → reverse via `wh thing about <endpoint> --resolve-collections` is fine; an `about`-Pair gives you both directions for free.
-- **Cross-repo relationship** → do **not** rely on reverse `about`. You will see it return `0`, and the four-direction test as a naive checklist will tell you the relationship "isn't traversable" — a false negative that pushes designers to contort the schema (downgrading a `Pair` to single-`about` + a denormalized string, or simulating the link with an extra assertion + a reactor). The correct construction is a **typed wref field** on the consumer-side thing/assertion, with the object side verified by `wh thing refs --inbound <target>`. This is exactly [`pattern-catalog.md` § 12 — Cross-Repo Substrate-Split](../../design-warmhub-repo/references/pattern-catalog.md); the full design checklist and the lifecycle/orphan prompts a cross-repo link must answer are in [`cross-repo-linkage.md`](cross-repo-linkage.md). (Caveat: `wh thing graph` does not currently walk inbound wref-edges, so don't use `graph` for reverse cross-repo discovery — use `refs --inbound`.)
+- **Same-repo relationship** → reverse via `wh thing about <endpoint> --resolve-collections` is fine; an `about`-Arc or `about`-Bond gives you both directions for free.
+- **Cross-repo relationship** → do **not** rely on reverse `about`. You will see it return `0`, and the four-direction test as a naive checklist will tell you the relationship "isn't traversable" — a false negative that pushes designers to contort the schema (downgrading an `Arc` to single-`about` plus a denormalized string, or simulating the link with an extra assertion + a reactor). The correct construction is a **typed wref field** on the consumer-side thing/assertion, with the object side verified by `wh thing refs --inbound <target>`. This is exactly [`pattern-catalog.md` § 12 — Cross-Repo Substrate-Split](../../design-warmhub-repo/references/pattern-catalog.md); the full design checklist and the lifecycle/orphan prompts a cross-repo link must answer are in [`cross-repo-linkage.md`](cross-repo-linkage.md). (Caveat: `wh thing graph` does not currently walk inbound wref-edges, so don't use `graph` for reverse cross-repo discovery — use `refs --inbound`.)
 
-This scope-split is *current platform behavior*, not a permanent law — which is exactly why it must be **verified, not assumed**. If your platform version might differ, run the 60-second two-repo probe in [`design-rules.md` § Verify Platform Mechanisms Before Encoding](design-rules.md) and let the observed result, not a remembered constraint, drive the `about`-Pair-vs-typed-wref-field choice.
+This scope-split is *current platform behavior*, not a permanent law — which is exactly why it must be **verified, not assumed**. If your platform version might differ, run the 60-second two-repo probe in [`design-rules.md` § Verify Platform Mechanisms Before Encoding](design-rules.md) and let the observed result, not a remembered constraint, drive the `about`-Arc/Bond-vs-typed-wref-field choice.
 
 ### Worked example: a vent-resolution graph's Resolution shape (passes)
 
 ```
-Resolution  ──about──▶  Pair[Vent, ResolutionTarget]
+Resolution  ──about──▶  Arc[Vent, ResolutionTarget]
                           │           │
                       (the vent)   (Workaround | Ticket | PullRequest | Wontfix |
                                     Explanation | cross-repo Lesson)
@@ -52,10 +52,10 @@ Resolution  ──about──▶  Pair[Vent, ResolutionTarget]
 |---|---|---|
 | What resolved this vent? | `wh thing about Vent/X --resolve-collections` | ✓ |
 | Which vents does this workaround resolve? | `wh thing about Workaround/Y --resolve-collections` | ✓ |
-| All unresolved vents about a FrictionTarget | `thing about FrictionTarget/Z --shape Vent` ⊖ vents in any Resolution Pair | ✓ derived |
+| All unresolved vents about a FrictionTarget | `thing about FrictionTarget/Z --shape Vent` ⊖ vents in any Resolution Arc | ✓ derived |
 | All vents addressed by any fix on FrictionTarget Z | walk Z → Vent → Resolution → ResolutionTarget | ✓ 3-hop traversal |
 
-A single design choice — a named Pair collection created by a prior op, then `about: "Pair/<name>"` — yields all four queries for free.
+A single design choice — a named Arc collection created by a prior op, then `about: "Arc/<name>"` — yields all four queries for free.
 
 ### Worked example: a duplicate-ticket graph's DuplicateAssertion (fails)
 
@@ -85,7 +85,7 @@ Same problem class as the vent-resolution example. Different design choice. Comp
 `about` is immutable. If you assert against the wrong target:
 
 1. Retract the bad assertion(s).
-2. Re-assert with the correct target (Pair / Set / List as appropriate).
+2. Re-assert with the correct target (Arc / Bond / Set / List as appropriate).
 
 The retracted assertions remain in version history but are hidden from default queries. This is workable when caught early; expensive when discovered after large data load.
 
@@ -135,7 +135,7 @@ From the docs:
 
 > **The `about` reference is set at creation and cannot be changed.** On revise, you can update the assertion's data, but never its about reference. If you assert about the wrong target by mistake, the recovery path is: retract the mis-targeted assertion, then create a new assertion pointing at the correct target.
 
-Why this matters for design: the `about` **arity** — whether an assertion is about a single thing, a Pair, a Set, or a List — is *permanent for any data already written*. (We use *arity*, not "cardinality": this is the structure of the relationship the assertion makes, not a relational one-to-many count.) The four-direction test (above) must be run before data lands, not after.
+Why this matters for design: the `about` **arity** — whether an assertion is about a single thing, an Arc, a Bond, a Set, or a List — is *permanent for any data already written*. (We use *arity*, not "cardinality": this is the structure of the relationship the assertion makes, not a relational one-to-many count.) The four-direction test (above) must be run before data lands, not after.
 
 ### `about` as the navigation axis
 
@@ -159,7 +159,7 @@ wh commit submit --ops '[
 ### When the primitive cannot be emitted yet
 
 Sometimes the design primitive is clear but the current write path cannot emit it yet: for example,
-the approved design needs a Pair/Set relationship assertion, but the importer, connector, or
+the approved design needs an Arc/Bond/Set relationship assertion, but the importer, connector, or
 platform surface can only write Things plus scalar payload fields today. Do not fake the edge.
 
 Use this disciplined retreat:
@@ -175,7 +175,7 @@ Use this disciplined retreat:
 3. **Record the retreat triple next to the shape and ingestion plan:**
    - accepted pitfall: the exact primitive the pipeline cannot currently emit;
    - migration trigger: the platform or connector capability that makes the real edge writable;
-   - re-derivable: the deterministic source fields needed to backfill the real Pair/Set/List.
+   - re-derivable: the deterministic source fields needed to backfill the real Arc/Bond/Set/List.
 4. **Plan the migration before loading volume.** The staged keys must be sufficient to derive stable
    relationship names later. When the trigger lands, replay into the approved primitive and remove the
    staging fields from new writes.
@@ -190,41 +190,56 @@ From the docs:
 
 > **Don't rely solely on the about wref to carry key identifiers.** If an assertion is about `Company/acme`, include the company name or ticker in the assertion's data too — this makes the assertion self-describing when read in isolation, without requiring a follow-up query to resolve the about target.
 
-This is a context-free-legibility rule — mirror identifying data onto the assertion so it reads on its own — and it compounds with the Pair-mirroring rule below.
+This is a context-free-legibility rule — mirror identifying data onto the assertion so it reads on its own — and it compounds with the collection-mirroring rule below.
 
 ---
 
-## Collections — Pair, Set, List
+## Collections — Arc, Bond, Set, List
 
-WarmHub has three built-in collection types. They're auto-created on first use, version-pinned, idempotent (same members → same collection thing), and composable (collections can contain collections).
+WarmHub's public collection forms are auto-created on first use, version-pinned, idempotent, and composable (collections can contain collections).
 
 | Type | Ordered? | Unique? | # of things | Field names | Use when… |
 |---|---|---|---|---|---|
-| **Pair** | yes | no | 2 | `first`, `second` | Directional binary relationship (A → B differs from B → A) |
-| **Set** | no | yes | 1+ | `members` | Symmetric or n-way relationship; order doesn't matter; no duplicates |
+| **Arc** | semantic direction | yes | 2 | `from`, `to` | Directed binary relationship (A → B differs from B → A) |
+| **Bond** | no | yes | 2 | `ends` | Symmetric binary relationship; `{A, B}` is one edge |
+| **Set** | no | yes | 1+ | `members` | Mechanical symmetric or n-way grouping |
 | **List** | yes | no | 1+ | `items` | Ordered sequence with possible duplicates |
+
+### Choosing Arc or Bond
+
+Ask whether reversing the two endpoints changes the relationship.
+
+- **Arc:** `Service/A blocks Service/B` has `from: Service/A` and `to: Service/B`; reversing it says that B blocks A, which is a different fact.
+- **Bond:** `Ticket/123 duplicates Ticket/456` has two `ends`; reversing the input names the same duplicate relationship, not a second fact.
+
+Never use input order as a direction on a Bond: its ends are canonicalized. Use Arc whenever each endpoint has a distinct semantic role.
+
+Arc and Bond require two distinct durable identities. Pair remains readable and writable for compatibility, but new models must use Arc or Bond; its `first` / `second` order is not promoted as relationship vocabulary.
+
+Existing Pair data is not automatically migrated, aliased, backfilled, or write-blocked. If a content owner intentionally remodels a directed Pair as an Arc, create the replacement Arc and assertions, then retract the old Pair in the same commit so one logical edge does not have two active relationship subjects.
 
 For a genuine three-way relation, don't reach for a collection at all — model it as a named domain shape or assertion with its own fields. Reserve `set`/`list` for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing.
 
 ### Inline syntax
 
-`about` accepts a **wref string only.** There is no inline tagged-object sugar (`{ pair: [...] }`, `{ set: [...] }`, `{ list: [...] }`) — the write pipeline rejects it. To assert about a collection, create the named collection first with its own `add` operation, then point `about` at the resulting wref:
+`about` accepts a **wref string only.** There is no inline tagged-object sugar (`{ arc: [...] }`, `{ bond: [...] }`, `{ set: [...] }`, `{ list: [...] }`) — the write pipeline rejects it. To assert about a collection, create the named collection first with its own `add` operation, then point `about` at the resulting wref:
 
 ```bash
 wh commit submit --ops '[
-  {"operation": "add", "kind": "collection", "type": "pair", "name": "vent-resolution-x", "members": ["Vent/X", "Workaround/Y"]},
-  {"operation": "add", "kind": "assertion", "name": "Resolution/vent-x", "about": "Pair/vent-resolution-x", "data": {}}
+  {"operation": "add", "kind": "collection", "type": "arc", "name": "vent-resolution-x", "members": ["Vent/X", "Workaround/Y"]},
+  {"operation": "add", "kind": "assertion", "name": "Resolution/vent-x", "about": "Arc/vent-resolution-x", "data": {}}
 ]' -m "Add vent resolution"
 ```
 
 ```js
 about: "Location/A"           // single thing
-about: "Pair/vent-resolution-x"   // Pair, created by a prior collection op
+about: "Arc/vent-resolution-x"    // directed binary relationship
+about: "Bond/duplicate-a-b"        // symmetric binary relationship
 about: "Set/cell-adjacency-0-0-0-1"  // Set, created by a prior collection op
 about: "List/cell-path-a"     // List, created by a prior collection op
 ```
 
-Valid collection `type` values on the `add`/`kind: "collection"` op are only `pair`, `set`, and `list`. Collection names must not contain `+`; use a readable slug instead.
+Valid collection `type` values on the `add`/`kind: "collection"` op are `arc`, `bond`, `set`, and `list`. `pair` is accepted only for compatibility. Collection names must not contain `+`; use a readable slug instead.
 
 ### Querying through collections
 
@@ -232,35 +247,22 @@ By default, `wh thing about <X>` returns assertions whose `about` is exactly `<X
 
 ```bash
 wh thing about Location/A                       # direct only
-wh thing about Location/A --resolve-collections # also includes Pair/Set/etc. containing A
+wh thing about Location/A --resolve-collections # also includes Arc/Bond/Set/etc. containing A
+wh thing about Location/A --resolve-collections --role from # Arc source-side only
 ```
 
 Collection resolution is HEAD-only — it finds collections that currently contain the thing. It does not resolve historical memberships.
 
-This is the critical operational caveat: a graph can be designed correctly with `about` referencing a named Pair collection (`about: "Pair/<name>"`) and still appear empty from an endpoint's side if the query forgets `--resolve-collections`. Document this in shape descriptions and tooling expectations.
-
-### Pair vs Set: directional vs symmetric
-
-```js
-// Directional: alice's trust of bob is not the same as bob's trust of alice
-// (named Pair collection ["Player/alice", "Player/bob"] created by a prior op)
-about: "Pair/<trust-name>", data: { trust: 0.8 }
-
-// Symmetric: adjacency is undirected — {A, B} = {B, A}
-// (named Set collection ["Cell/0-0", "Cell/0-1"] created by a prior op)
-about: "Set/<adjacency-name>", data: { kind: "neighbor" }
-```
-
-Use Pair when (A, B) is meaningfully different from (B, A). Use Set when {A, B} should produce one collection regardless of order.
+This is the critical operational caveat: a graph can be designed correctly with `about` referencing a named Arc or Bond collection and still appear empty from an endpoint's side if the query forgets `--resolve-collections`. Use `--role from|to|ends` when a query needs a specific Arc direction or Bond membership. Document this in shape descriptions and tooling expectations.
 
 ### Composability
 
 Collections are things, so they can be members of other collections:
 
 ```js
-// Pair/location-ab and Pair/location-cd are themselves named Pair collections
-// created by prior ops; the outer Pair collection is created from those two wrefs
-about: "Pair/<outer-name>"   // pair of pairs, e.g. Pair/location-ab-cd containing [Pair/location-ab, Pair/location-cd]
+// Arc/location-ab and Arc/location-cd are themselves named collections
+// created by prior ops; the outer Arc collection is created from those two wrefs
+about: "Arc/<outer-name>"   // an Arc whose endpoints are collection wrefs
 ```
 
 Useful for hierarchical or nested relationships, but pay the readability cost — multi-level composition can be hard to follow without good descriptions.
@@ -269,11 +271,11 @@ Useful for hierarchical or nested relationships, but pay the readability cost �
 
 ## Context-Free Legibility (mirrored fields)
 
-When `about` is a Pair / Set / List, context-free readers traversing the graph need help understanding what the assertion is *about* without resolving the collection's members. Mirror the practical traversal fields onto the assertion:
+When `about` is an Arc / Bond / Set / List, context-free readers traversing the graph need help understanding what the assertion is *about* without resolving the collection's members. Mirror the practical traversal fields onto the assertion:
 
 ```js
-// Native traversal target — named Pair collection created by a prior op
-about: "Pair/<basis-name>"   // e.g. Pair/reviewedclaim-x-arxiv-2601-03192, over ["ReviewedClaim/X", "ExternalSourceReference/arxiv-2601.03192"]
+// Native traversal target — named Arc collection created by a prior op
+about: "Arc/<basis-name>"   // e.g. Arc/reviewedclaim-x-arxiv-2601-03192, over ["ReviewedClaim/X", "ExternalSourceReference/arxiv-2601.03192"]
 
 // Mirrored fields on the assertion's data (context-free legibility)
 data: {
@@ -285,13 +287,13 @@ data: {
 }
 ```
 
-The native Pair traversal stays — but the mirrored fields make the assertion legible *without* resolving the Pair. This addresses the "MCP reader sees no source grounding" failure mode — an actual incident observed in a literature-review WarmHub graph (the kind of repo that curates claims drawn from external papers and Git artifacts), where readers traversing to a basis assertion couldn't tell the subject claim from the evidence source until the fields were mirrored.
+The native Arc traversal stays — but the mirrored fields make the assertion legible *without* resolving the Arc. This addresses the "MCP reader sees no source grounding" failure mode — an actual incident observed in a literature-review WarmHub graph (the kind of repo that curates claims drawn from external papers and Git artifacts), where readers traversing to a basis assertion couldn't tell the subject claim from the evidence source until the fields were mirrored.
 
 ---
 
 ## BDU and the binomial-opinion constraint
 
-**BDU** is shorthand for **belief / disbelief / uncertainty** — a *subjective-logic opinion triple*, sometimes written `(b, d, u, α)` with a base-rate prior `α`. It's WarmHub's canonical way of attaching per-assertion uncertainty: how strongly an assertion is believed true, how strongly disbelieved, residual uncertainty that doesn't commit either way, and the base rate. Throughout this skill, **"BDU on assertion truth"** means the triple lives on the assertion itself; **"BDU on edges"** means it lives on a relationship assertion (one whose `about` is a Pair / Set / List of things).
+**BDU** is shorthand for **belief / disbelief / uncertainty** — a *subjective-logic opinion triple*, sometimes written `(b, d, u, α)` with a base-rate prior `α`. It's WarmHub's canonical way of attaching per-assertion uncertainty: how strongly an assertion is believed true, how strongly disbelieved, residual uncertainty that doesn't commit either way, and the base rate. Throughout this skill, **"BDU on assertion truth"** means the triple lives on the assertion itself; **"BDU on edges"** means it lives on a relationship assertion (one whose `about` is an Arc, Bond, Set, or List of things).
 
 From the docs:
 

@@ -1,6 +1,6 @@
 ---
 name: wh-commit-design
-description: Design WarmHub commit plans for large or non-trivial ingests. Use when deciding chunking, semantic partitioning, commit sizing, resumable multi-commit workflows, or prod-like validation strategy for `wh commit create` runs. Trigger on requests about commit sizing, max ops, chunking, batching, JSONL ingest planning, large dataset ingestion, commit runbooks, or converting a real dataset into safe WarmHub commits.
+description: Design WarmHub commit plans for large or non-trivial ingests. Use when deciding chunking, semantic partitioning, commit sizing, resumable multi-commit workflows, or prod-like validation strategy for `wh commit submit` runs. Trigger on requests about commit sizing, max ops, chunking, batching, JSONL ingest planning, large dataset ingestion, commit runbooks, or converting a real dataset into safe WarmHub commits.
 ---
 
 # Wh Commit Design
@@ -71,7 +71,7 @@ If the run is multi-commit:
 4. commit repeatedly from those written files
 5. persist resumable state
 
-For large JSONL automation, avoid `wh commit create --json` if the wrapper would have to parse or buffer the full returned payload.
+For large JSONL automation, avoid `wh commit submit --json` if the wrapper would have to parse or buffer the full returned payload.
 
 ## 5. Define The Validation Path
 
