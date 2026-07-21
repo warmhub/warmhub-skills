@@ -18,7 +18,7 @@ Decide which pattern fits:
 - seed-only
 - public reactive
 - private / secret-backed
-- cron / mixed
+- scheduled / mixed
 
 Prefer the lightest pattern that satisfies the requirement.
 
@@ -53,14 +53,16 @@ The handler is a service you deploy that receives webhook deliveries. Decide:
 The component repo can hold the handler source (e.g. `actions/` or `src/`), but the running endpoint
 is hosted by you. There is no managed in-platform execution.
 
-## Step 5: Design Subscriptions
+## Step 5: Design Automation
 
-For each subscription decide:
-- event vs cron trigger
+For each event subscription decide:
 - stable subscription name
 - the `webhookUrl` it delivers to
 - whether one credential set must be bound for inbound auth
 - health requirement and teardown expectation
+
+For scheduled work, configure an external scheduler to call the handler and use the handler's own
+access controls.
 
 ## Step 6: Write `warmhub/component.json`
 

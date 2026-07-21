@@ -11,17 +11,17 @@ directory.
 wh prime
 wh repo view <org/repo> --json
 wh shape list --repo <org/repo> --json
-wh thing head --repo <org/repo> --json
-wh assertion head --repo <org/repo> --json
-wh commit list --repo <org/repo> --last 10 --json
+wh thing list --repo <org/repo> --count --json
+wh assertion list --repo <org/repo> --count --json
+wh thing history --repo <org/repo> --shape <ShapeName> --limit 10 --json
 ```
 
 For shape-specific inventory:
 
 ```bash
-wh thing head --repo <org/repo> --shape <ShapeName> --json
-wh thing query --repo <org/repo> --shape <ShapeName> --json
-wh assertion head --repo <org/repo> --shape <ShapeName> --json
+wh thing list --repo <org/repo> --shape <ShapeName> --count --json
+wh thing query --repo <org/repo> --shape <ShapeName> --count --json
+wh assertion list --repo <org/repo> --shape <ShapeName> --count --json
 ```
 
 If the CLI response includes pagination cursors, follow them when the first page is too small to

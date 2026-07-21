@@ -3,7 +3,8 @@ name: add-warmhub-component
 description: >
   Add or install a WarmHub component on an existing or newly built WarmHub repo. Use when wrapping a
   repo as a component, installing published components such as Veritas, designing
-  `warmhub/component.json` and `warmhub/manifest.json`, wiring event or cron subscriptions, choosing
+  `warmhub/component.json` and `warmhub/manifest.json`, wiring event subscriptions or external
+  schedulers, choosing
   seed-only versus webhook-handler packaging, configuring credential sets for inbound delivery auth,
   or validating install, doctor, update, and teardown behavior. Trigger phrases: "add warmhub
   component", "install Veritas", "with Veritas", "componentize this repo", "component manifest",
@@ -56,7 +57,8 @@ credentials, install state, or sensitivity are unknown.
   with the installed component ref shown by the list output. Inspect the
   shapes/subscriptions/resources it added and update the manifest. Do not fake component behavior
   with local fields.
-- Prefer the smallest viable component pattern: seed-only, event webhook, cron webhook, or mixed.
+- Prefer the smallest viable component pattern: seed-only, event webhook, or an external scheduler
+  calling the deployed handler for recurring work.
 - Preserve existing repo behavior while making component metadata and manifest state explicit.
 - Update the project-state manifest with component identity, resources declared, validation status,
   and remaining deployment or credential work when a manifest is present.
@@ -88,7 +90,7 @@ be grilled, stop scaffolding and interview first.
 
 Walk the tree in this order:
 1. Entry point: componentize an existing repo or build from scratch
-2. Pattern: seed-only, event-driven, cron-driven, or mixed
+2. Pattern: seed-only, event-driven, externally scheduled, or mixed
 3. Trigger shape, output shape, and config surface
 4. Handler runtime: bash, bun/node, or an existing service command
 5. Handler hosting: where the webhook endpoint runs and its public HTTPS URL
@@ -107,7 +109,7 @@ After the tree is resolved, summarize the approved design and continue with the 
 | Seed-only | Shapes, config, or starter data with no runtime logic | `shapes`, `seeds`, `health` |
 | Event-driven webhook | React to writes on a shape via a deployed handler | `shapes`, `subscriptions` (event trigger), optional `credentials` |
 | Secret-backed webhook | Handler delivery needs inbound auth or the handler holds secrets | `credentials`, `subscriptions.credentials` |
-| Cron / mixed | Scheduled syncs, maintenance jobs, or several triggers | multiple `subscriptions` (cron + event), `health`, `teardown` |
+| Scheduled / mixed | Recurring work or several triggers | event `subscriptions` when needed, `health`, `teardown`; an external scheduler calls the handler directly |
 
 Choose the lowest-complexity pattern that satisfies the requirement.
 
@@ -129,8 +131,8 @@ such as `warmhub/veritas`; after install, run `wh component list --repo <org>/<r
 listed ref to `doctor`, `view`, `teardown`, and `update`.
 
 **Subscriptions deliver to a webhook URL you operate.** Each subscription declares a `webhookUrl` —
-a public HTTPS endpoint that receives the delivery POST and does the work. The platform no longer
-runs your code in a managed container; you deploy the handler yourself and point `webhookUrl` at it.
+a public HTTPS endpoint that receives the delivery POST and does the work. WarmHub does not run
+your code in a managed container; you deploy the handler yourself and point `webhookUrl` at it.
 The component repo can hold the handler source (e.g. an `actions/` directory), but the running
 endpoint is hosted by you. The webhook URL must be public HTTPS — no localhost or private IPs.
 
@@ -249,10 +251,10 @@ wh component update acme/my-component --repo org/repo
 
 All in `references/`:
 - `component-lifecycle.md` — package structure, manifest contract, lifecycle semantics, ownership
-- `action-patterns.md` — seed-only, event webhook, cron, and secret-backed handler patterns
+- `action-patterns.md` — seed-only, event webhook, externally scheduled handler, and secret-backed handler patterns
 - `action-container-credentials.md` — credential declarations, inbound delivery auth, binding
 - `shape-design.md` — shape naming, config seeds, input/output separation
-- `subscription-wiring.md` — event vs cron triggers, health, teardown, naming
+- `subscription-wiring.md` — event triggers, external scheduling, health, teardown, naming
 - `example-components.md` — proven component pattern selection guide
 
 </reference_index>

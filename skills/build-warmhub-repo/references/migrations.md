@@ -2,9 +2,11 @@
 
 This file applies when you have an existing populated WarmHub graph and you need to change something the immutable-`about` rule won't let you change in place. Three common triggers:
 
-- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design emits a named `kind: "collection"` op (`type: "set"` or `type: "pair"`, a stable `name`, and `members`) and then targets the assertion at that collection's wref — `about: "Set/<name>"` or `about: "Pair/<name>"`. `about` accepts a wref only; an inline `about: { set: [a, b] }` object is rejected.
+- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design emits a named `kind: "collection"` op (`type: "arc"`, `"bond"`, `"set"`, or `"list"`, a stable `name`, and `members`) and then targets the assertion at that collection's wref. `about` accepts a wref only; an inline collection object is rejected.
 - **Shape semantic change.** A v1 shape gets revised to mean something different, or split into two shapes; existing assertions targeting it now have the wrong target shape.
 - **Subject swap.** A v1 design asserts about the wrong target (e.g. `about: Filing` when the navigation axis should have been `about: Company`); the new design points at a different thing.
+
+Pair compatibility is not a migration trigger: existing Pair data remains accepted, readable, writable, and unaliased. Use this guide for Pair only when its owner intentionally remodels it as an Arc; create the replacement Arc and assertions, then retract the old Pair in the same commit. Do not backfill it automatically.
 
 In all three cases the v1 assertions can't be edited in place; they have to be **retracted and re-asserted** under the v2 design. And because every assertion's `about` is immutable, the retraction **cascades** through every dependent assertion targeting the retracted assertion.
 
@@ -20,7 +22,7 @@ Per v1 thing migrated, apply all four:
 
 ### 1. Deterministic v2 names from canonical-sorted member wrefs
 
-Hash the v2 assertion's `about` members (in canonical order — sorted for `Set`, ordered as-given for `Pair` / `List`) plus the v2 shape name. Derive the v2 wref from that hash. The wref must be identical on every re-run.
+Hash the v2 assertion's `about` members (in canonical order — sorted for `Bond` / `Set`, ordered as-given for `Arc` / `List`) plus the v2 shape name. Derive the v2 wref from that hash. The wref must be identical on every re-run.
 
 ```
 v2-wref = <ShapeName>/<prefix>-<short-hash>
@@ -33,7 +35,7 @@ Avoid: timestamps, random ids, run-batch ids, environment-specific values, or an
 
 ### 2. `migratedFrom` audit-trail field
 
-Every v2 assertion (and every cascade-rewritten dependent) carries a `migratedFrom: <v1-wref>` field pointing at the assertion it replaces. The v1 assertion is retracted but stays visible in version history (`wh thing view <v1-wref> --include retracted`); `migratedFrom` makes the lineage explicit so future readers can trace why the v2 wref looks the way it does.
+Every v2 assertion (and every cascade-rewritten dependent) carries a `migratedFrom: <v1-wref>` field pointing at the assertion it replaces. The v1 assertion is retracted but stays visible in version history (`wh thing view <v1-wref> --include-retracted`); `migratedFrom` makes the lineage explicit so future readers can trace why the v2 wref looks the way it does.
 
 For the cascade — the rewritten CertaintyOpinion / ReviewEvent / Critique now pointing at the v2 assertion — `migratedFrom` points at the v1 dependent that originally targeted the retracted v1 assertion. Each cascade level preserves its own lineage.
 
@@ -134,7 +136,7 @@ Before you trust your migration to land cleanly:
 - **Non-deterministic v2 names.** Caused by version-pinning drift, unsorted `Set` members, or environmental inputs leaking into the hash. Symptom: re-runs write duplicate v2 assertions. Fix: canonicalize the version pinning of members before hashing (use `wh thing view <wref>` and pin to the returned version to lock to current HEAD), and sort `Set` members by wref string before hashing.
 - **Multi-level cascade.** A CertaintyOpinion targets the v1 assertion; a Critique targets that CertaintyOpinion; a ReviewEvent targets that Critique. Recursion needs a cycle guard (rare in practice but not impossible).
 - **Concurrent v1 writes during migration.** A new v1-pattern assertion gets written while the migration is running. The migration won't see it; it'll be left as v1 detritus. Mitigation: update the assertion-emitting scripts to v2 *before* running the migration so no new v1 things can be written, or run the migration in a loop until the v1 set is stable empty.
-- **External tooling that filters retracted things.** The graph's retracted assertions are still visible via `--include retracted`, but tooling that doesn't pass that flag will see the v1 disappear and may be confused. Document the migration window; consumers may need to update their queries to reference v2 wrefs explicitly or to include retracted.
+- **External tooling that filters retracted things.** The graph's retracted assertions are still visible via `--include-retracted`, but tooling that doesn't pass that flag will see the v1 disappear and may be confused. Document the migration window; consumers may need to update their queries to reference v2 wrefs explicitly or to pass `--include-retracted`.
 - **New required v2 fields + cascade-rewrite = partial-apply hazard** *(common; surfaced from real migrations)*. When a v2 shape adds fields that weren't on v1, the cascade-rewrite step (which copies v1 data verbatim onto the v2 form) produces v2 assertions missing the new required fields. The backend validates per-op and rejects the bad op — but the rest of the same `wh commit submit --ops` call may still apply, leaving partial state. Two mitigations applied together: **(a)** when revising a shape with v1 data in flight, mark genuinely-optional new fields as optional (`?` suffix in WarmHub shape syntax) rather than required; **(b)** have the migration script's cascade-rewrite explicitly inject sensible defaults for any v2 field not present in v1. Don't rely on backend rejection to catch the gap — by the time it rejects, partial state has landed.
 - **`wh commit submit` is per-op-validated, not per-commit-atomic** *(surprising; surfaced from real migrations)*. A validation failure on one op does **not** roll back the other ops in the same commit. The exit code reflects the worst-case op, not the per-op outcome. Mitigation: pre-validate every op in the array against the v2 shape contract before submitting `wh commit submit`; verify post-commit state by reading back with `wh thing view` / `wh assertion view`; don't trust the exit code. Idempotent v2 names (Move 1) make per-thing re-runs safe when partial-apply happens. A native `wh ops validate` primitive could catch this client-side.
 - **`whlr:` locator URIs after referenced-shape revisions** *(surfaced from real migrations)*. When a thing or assertion references something whose shape has been revised, the wref may come back as an opaque `whlr:UUID` form rather than the canonical name. The CLI rejects `whlr:` URIs in most contexts except `wh thing refs --outbound`. Migration scripts that read v1 data with refs to shape-revised things must resolve the UUIDs via `wh thing refs --outbound <wref>` before using them in new ops; failing to do so produces ops that the backend rejects as malformed.

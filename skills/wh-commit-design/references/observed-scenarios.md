@@ -123,5 +123,5 @@ The numbers below are grounded in observed commit-planning work, but the dataset
 ## Operational Caveats
 
 - Assertion exports must parameterize the canonical `about` org/repo. Do not hardcode benchmark wrefs if the data will be replayed elsewhere.
-- For large JSONL automation, wrappers around `wh commit create` should avoid `--json` if they cannot safely handle very large returned payloads.
+- For large JSONL automation, wrappers around `wh commit submit` should avoid `--json` if they cannot safely handle very large returned payloads.
 - Keep generated JSONLs and benchmark artifacts in scratch space, not tracked source trees.

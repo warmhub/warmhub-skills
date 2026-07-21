@@ -12,12 +12,12 @@
 //                    field that names a wref (the DuplicateAssertion smell).
 //                    Does not walk endpoints or call wh thing about.
 //   default          2a + 2b. Samples assertions per shape, classifies aboutWref
-//                    (Pair / Set / List / single thing), and runs
+//                    (Arc / Bond / Pair / Set / List / single thing), and runs
 //                    independent reachability checks per endpoint:
 //                      (a) `wh thing about <endpoint> --resolve-collections
 //                          --shape <X> --all` returns this assertion.
 //                      (b) `wh thing refs <endpoint> --inbound --all` returns
-//                          the collection thing (for Pair/Set/List).
+//                          the collection thing (for Arc/Bond/Pair/Set/List).
 //                      (c) For every typed-wref data field on the assertion,
 //                          the target reports this assertion via `wh thing
 //                          refs <target> --inbound --all`. Covers single-about
@@ -164,10 +164,12 @@ function isWrefType(t) {
 //
 // Shape definitions do NOT declare `about` arity — it is observable only
 // from assertions' `aboutWref` strings. We classify by the wref's leading shape
-// segment: `Pair/...`, `Set/...`, `List/...`, or anything else.
+// segment: `Arc/...`, `Bond/...`, legacy `Pair/...`, `Set/...`, `List/...`, or anything else.
 
 function classifyAboutWref(aboutWref) {
   if (typeof aboutWref !== 'string') return { kind: 'unknown' };
+  if (aboutWref.startsWith('Arc/')) return { kind: 'arc' };
+  if (aboutWref.startsWith('Bond/')) return { kind: 'bond' };
   if (aboutWref.startsWith('Pair/')) return { kind: 'pair' };
   if (aboutWref.startsWith('Set/')) return { kind: 'set' };
   if (aboutWref.startsWith('List/')) return { kind: 'list' };
@@ -202,7 +204,7 @@ function schemaSmells(shape) {
     if (!name.toLowerCase().endsWith('wref')) continue;
     const base = normalizeFieldType(type);
     if (base !== 'wref' && base !== 'unknown') {
-      out.push({ name, reason: `field name ends in Wref but typed as ${base} (raw: ${fieldTypeString(type)}) — should be wref-typed or modeled as a Pair endpoint` });
+      out.push({ name, reason: `field name ends in Wref but typed as ${base} (raw: ${fieldTypeString(type)}) — should be wref-typed or modeled as an Arc or Bond endpoint` });
     }
   }
   return out;
@@ -369,14 +371,16 @@ function checkDataWrefReachability(shape, asn) {
 }
 
 function collectEndpointWrefs(collectionThing) {
-  // Pair: { first, second }
+  // Arc: { from, to }; Bond: { ends: [...] }; legacy Pair: { first, second }
   // Set: { members: [...] }
   // List: { items: [...] }
   const d = collectionThing?.data ?? {};
   const out = [];
+  if (typeof d.from === 'string') out.push(d.from);
+  if (typeof d.to === 'string') out.push(d.to);
   if (typeof d.first === 'string') out.push(d.first);
   if (typeof d.second === 'string') out.push(d.second);
-  for (const arr of [d.members, d.items]) {
+  for (const arr of [d.ends, d.members, d.items]) {
     if (Array.isArray(arr)) for (const v of arr) if (typeof v === 'string') out.push(v);
   }
   return out.map(stripVersionSuffix);
@@ -453,7 +457,7 @@ function checkRuntimeOneShape(shape, items) {
       continue;
     }
 
-    // Pair / Set / List: resolve the collection thing, walk every endpoint,
+    // Arc / Bond / Pair / Set / List: resolve the collection thing, walk every endpoint,
     // and run two independent reachability checks per endpoint:
     //   1. `wh thing about <endpoint> --resolve-collections --shape <X>` returns
     //      this assertion. Failure here = the relationship is invisible from
@@ -558,7 +562,7 @@ async function main() {
   }
 
   const targets = shapes.filter((s) => !TARGET_SHAPE || s.name === TARGET_SHAPE);
-  const builtin = new Set(['Pair', 'Set', 'List']); // skip collection-builtins
+  const builtin = new Set(['Arc', 'Bond', 'Pair', 'Set', 'List']); // skip collection-builtins
   for (const shape of targets) {
     if (builtin.has(shape.name)) continue;
 

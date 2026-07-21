@@ -43,7 +43,7 @@ Manifest profile:
 
 Choose this whenever a delivery to your endpoint must be trusted before it acts.
 
-## Pattern D: Cron Or Mixed Workflow Component
+## Pattern D: Scheduled Or Mixed Workflow Component
 
 Best fit:
 - scheduled syncs, cleanup, summarization, or maintenance
@@ -51,7 +51,7 @@ Best fit:
 - operator-visible health state matters
 
 Manifest profile:
-- one or more `cron` subscriptions (plus any `event` subscriptions)
+- event subscriptions when needed; an external scheduler calls the deployed handler directly
 - explicit `health.requires`
 - explicit `teardown.subscriptions`
 

@@ -30,7 +30,7 @@ Examples:
 
 - `ClaimMatchOutcome` and `ClaimInjuryReport` should be separate shapes if a sports model may be reliable on outcomes but weak on injuries.
 - `BuildFailureClaim` and `SecurityFindingClaim` should be separate shapes if a code reviewer has different track records across those domains.
-- Directional pair claims should not share reputation unless their direction has the same meaning.
+- Directional Arc claims should not share reputation unless their direction has the same meaning.
 
 ## Audit Checklist
 

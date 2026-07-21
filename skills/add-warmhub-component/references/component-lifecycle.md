@@ -70,7 +70,7 @@ The manifest declares all component-managed resources.
 - `component` — must match `component.json`
 - `shapes` — shapes to create or ensure exist
 - `credentials` — credential sets the component expects (e.g. `WEBHOOK_*` keys for delivery auth)
-- `subscriptions` — event or cron triggers that deliver to a `webhookUrl` you operate
+- `subscriptions` — event triggers that deliver to a `webhookUrl` you operate; external schedulers call handlers directly
 - `seeds` — initial things to create on install
 - `health` — passive requirements checked by `wh component doctor`
 - `teardown` — pause/delete behavior for managed subscriptions

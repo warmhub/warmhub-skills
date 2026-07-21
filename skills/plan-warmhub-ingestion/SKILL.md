@@ -34,7 +34,7 @@ When the source is an existing WarmHub repo and facts are stale or missing, comp
 1. Read `repoDesignSummary`; stop and hand off to `design-warmhub-repo` if shape boundaries,
    identity, assertion targets, about-cardinality, four-direction results, or write model are
    missing.
-2. Classify each source: API, file, webhook, cron pull, human/mobile collection, existing WarmHub
+2. Classify each source: API, file, webhook, externally scheduled pull, human/mobile collection, existing WarmHub
    repo, or mixed.
 3. For each source, plan access, parsing, normalization, provenance, retry behavior, and failure
    surfaces.
@@ -48,8 +48,8 @@ When the source is an existing WarmHub repo and facts are stale or missing, comp
    records with provenance, validation, and moderation or QC gates.
 6. Define idempotency: source artifact hash, upstream revision id, event id, reporting-period key, or
    composite key.
-7. Define backfill and steady-state cadence, including cron or webhook subscription needs and the
-   snapshot absence policy: full-snapshot deactivate/status, active-only review, later-full field-flip,
+7. Define backfill and steady-state cadence, including external scheduling or a webhook subscription,
+   and the snapshot absence policy: full-snapshot deactivate/status, active-only review, later-full field-flip,
    or immutable event-stream ignore.
 8. Define provenance and QC assertions, including raw source values, derived semantic values,
    mapping policy/version when mappings can drift, and when the pipeline fails closed, warns, or
@@ -80,7 +80,7 @@ Return:
 - backfill boundary and steady-state cadence
 - snapshot absence policy
 - cross-source join feasibility result
-- automation plan: cron, webhook, manual, or collector-driven
+- automation plan: external scheduler (including cron), webhook, manual, or collector-driven
 - component dependencies and write/read boundaries, or `none`
 - QC assertions and failure policy
 - credential and deployment needs

@@ -4,13 +4,13 @@ A WarmHub ingestion repo deals with auth in two directions:
 
 1. **Outbound (your code → WarmHub):** writing things/assertions. This always uses a `WH_TOKEN` PAT —
    in local dev, CI, and the deployed webhook handler alike.
-2. **Inbound (WarmHub → your handler):** when a webhook or cron subscription delivers an event to
+2. **Inbound (WarmHub → your handler):** when a webhook subscription delivers an event to
    your handler's HTTPS endpoint. This is verified with a bound credential set, not a PAT.
 
-> Managed in-platform action execution was removed from the platform. There is no longer a runtime
-> that clones your repo and runs your CLI with a short-lived token injected on stdin. Scheduled and
-> event-driven automation now POSTs to a webhook handler **you** deploy, and that handler
-> authenticates back to WarmHub with its own `WH_TOKEN` PAT.
+> WarmHub does not provide a runtime that clones your repo and runs your CLI with a short-lived
+> token injected on stdin. Event
+> subscriptions POST to a webhook handler **you** deploy; external schedulers call it for scheduled
+> automation. The handler authenticates back to WarmHub with its own `WH_TOKEN` PAT.
 
 **Do NOT read from `~/.warmhub/auth.json`** — that file contains the CLI's own session token and is
 not the supported auth path for SDK clients.
@@ -59,13 +59,13 @@ includes:
 
 | Field | Description |
 |-------|-------------|
-| `event` | `"warmhub.write"`, `"warmhub.retract"`, or `"warmhub.cron"` |
+| `event` | `"warmhub.write"` or `"warmhub.retract"` |
 | `traceId` | Trace identifier for the event chain |
 | `runId` | Action run identifier |
 | `subscriptionId` | Subscription identifier |
 | `repo` | `{ "orgName", "repoName" }` — the subscription's home repo |
 | `callback_url` | Endpoint to report async progress / terminal outcome (post with normal `repo:write` auth) |
-| `matchedOperations` | Matched operations (empty for cron ticks) |
+| `matchedOperations` | Operations matched by the subscription filter |
 
 Delivery headers include `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
 

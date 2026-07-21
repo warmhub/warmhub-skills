@@ -64,7 +64,7 @@ silent drift.
 
 ## Verify Platform Mechanisms Before Encoding
 
-A surprising share of design contortions trace back to a *belief about how the platform behaves* that was never actually run. The failure mode: a designer encodes "the platform can't do X" into the schema — downgrades a `Pair` to single-`about` plus a denormalized string, or simulates a link with an extra per-domain assertion and a subscription reactor — working around a constraint that turns out to be largely imaginary.
+A surprising share of design contortions trace back to a *belief about how the platform behaves* that was never actually run. The failure mode: a designer encodes "the platform can't do X" into the schema — downgrades an `Arc` to single-`about` plus a denormalized string, or simulates a link with an extra per-domain assertion and a subscription reactor — working around a constraint that turns out to be largely imaginary.
 
 A real example. A consumer's topology spec asserted, verbatim: *"cross-repo `about` references are not supported; `wh thing about` only resolves within the writing repo; the write pipeline verifies `about` targets exist in the writing repo."* Two of those three clauses are false — cross-repo `about` writes succeed, and target existence is validated *across* repos. The one true clause (reverse `about` is repo-local) had a clean answer the spec never reached: a typed wref field traversed with `refs --inbound`. The schema was bent around a constraint a 60-second test would have dissolved.
 
@@ -208,7 +208,7 @@ This rule interacts with **Source Ownership** above (matching-critical fields ar
 
 > The primary rule is in [`primitives.md` § The Traversability Contract](primitives.md). This section covers the *secondary* readability concern that arises after the primary contract is satisfied. Get `about` arity right first (per primitives.md and the four-direction test); then apply the mirroring rule below for context-free reader legibility.
 
-If the native assertion target uses a `Pair`, `Set`, `List`, or other collection edge target, mirror the practical traversal fields onto the assertion.
+If the native assertion target uses an `Arc`, `Bond`, `Set`, `List`, or other collection edge target, mirror the practical traversal fields onto the assertion.
 
 For a basis-style assertion, include fields like:
 - `<subject>Wref` (e.g. `claimWref`, `hypothesisWref`)
@@ -216,7 +216,7 @@ For a basis-style assertion, include fields like:
 - `<basis>Kind` (e.g. `sourceKind`, `evidenceKind` — `arxiv` / `git` / `internal-doc`)
 - `<basis>IdentityKey` (the stable external id of the basis)
 
-This prevents context-free readers from mistaking the subject artifact for the evidence source. The native `Pair` traversal stays — but the mirrored fields make the assertion legible without it.
+This prevents context-free readers from mistaking the subject artifact for the evidence source. The native `Arc` traversal stays — but the mirrored fields make the assertion legible without it.
 
 ## Certainty as State (Where D8 Calls For It)
 
@@ -289,9 +289,9 @@ A frequent over-fear: "writing a derived metric back into the graph means a retr
 | **2** | The derived *population* changes between runs — some instances should no longer exist | retract the dropped instances + add the new ones (**instance-level** retract-and-replay) | Moderate — still append-only; `revise` alone can't remove an instance whose cause dropped out |
 | **3** | The shape or the `about` arity changes | retract-and-replay **with dependent cascade** | Expensive — this is the [`migrations.md`](../../build-warmhub-repo/references/migrations.md) case |
 
-Most write-back is tier 1 or tier 2, not tier 3. A derived metric with a **deterministic name** and `about: <single thing>` refreshes in place with `revise` (tier 1) — no retract, no Pair-collection dance. A consensus value named `ConsensusBelief/<event>-<cause>` with `about: <event>` is refreshed by its upstream job purely through `revise`; nothing is retracted unless the *cause itself* drops out of the population (then it's tier 2 — retract that one instance).
+Most write-back is tier 1 or tier 2, not tier 3. A derived metric with a **deterministic name** and `about: <single thing>` refreshes in place with `revise` (tier 1) — no retract, no collection dance. A consensus value named `ConsensusBelief/<event>-<cause>` with `about: <event>` is refreshed by its upstream job purely through `revise`; nothing is retracted unless the *cause itself* drops out of the population (then it's tier 2 — retract that one instance).
 
-The design levers that keep you on the cheap tiers: **deterministic names** (a refresh reuses the same identity → tier 1) and **single-thing `about` where the relationship genuinely has one subject** (so a value change isn't a Pair-collection retract-replay). If a recompute *feels* like it forces tier 3, check whether the name is non-deterministic or the `about` arity is heavier than the relationship needs — that mis-design, not append-only itself, is usually the real cost. (For cross-repo links, retract-and-replay also cascades through the inbound wref fields that target the retracted instance — see [`cross-repo-linkage.md`](cross-repo-linkage.md) § Lifecycle & orphan policy prompts.)
+The design levers that keep you on the cheap tiers: **deterministic names** (a refresh reuses the same identity → tier 1) and **single-thing `about` where the relationship genuinely has one subject** (so a value change isn't a collection retract-replay). If a recompute *feels* like it forces tier 3, check whether the name is non-deterministic or the `about` arity is heavier than the relationship needs — that mis-design, not append-only itself, is usually the real cost. (For cross-repo links, retract-and-replay also cascades through the inbound wref fields that target the retracted instance — see [`cross-repo-linkage.md`](cross-repo-linkage.md) § Lifecycle & orphan policy prompts.)
 
 ## Stale-Verdict Retraction Discipline
 

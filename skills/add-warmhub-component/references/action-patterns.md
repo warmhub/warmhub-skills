@@ -1,13 +1,12 @@
 # Action Patterns
 
 A component reacts to events by declaring **subscriptions**. Each subscription has:
-- a `trigger` — `{ "kind": "event", "shape": "...", "filter"?: {...} }` or
-  `{ "kind": "cron", "cronspec": "...", "timezone"?: "..." }`
+- a `trigger` — `{ "kind": "event", "shape": "...", "filter"?: {...} }`
 - a `webhookUrl` — a public HTTPS endpoint **you operate** that receives the delivery POST and does
   the work
 - optional `credentials` — a bound credential set for inbound delivery auth (and any handler secrets)
 
-> The platform no longer runs component code in a managed container, and the manifest has no
+> WarmHub does not run component code in a managed container, and the manifest has no
 > `actions` array. The handler is a service you deploy; the subscription just points at its URL.
 
 Choose the simplest pattern that fits.
@@ -55,23 +54,11 @@ Notes:
 - omit `credentials` when the endpoint does not need to verify the caller and the handler needs no
   extra secrets
 
-## 3. Cron Webhook
+## 3. Externally Scheduled Handler
 
-Use for scheduled syncs, cleanup, summarization, or recurring checks. Minimum interval is 5 minutes.
-
-```json
-{
-  "subscriptions": [
-    {
-      "name": "incident/nightly-digest",
-      "trigger": { "kind": "cron", "cronspec": "0 6 * * *", "timezone": "UTC" },
-      "webhookUrl": "https://handler.example.com/incident/nightly"
-    }
-  ]
-}
-```
-
-Cron deliveries carry `event: "warmhub.cron"` and have no matched operations.
+Use an external scheduler you operate for scheduled syncs, cleanup, summarization, or recurring
+checks. It calls the deployed handler directly; there is no cron subscription in the manifest or
+WarmHub CLI. Authenticate that request with the handler's own access controls.
 
 ## 4. Secret-Backed Webhook
 
@@ -110,11 +97,11 @@ WarmHub POSTs JSON to `webhookUrl`:
 
 | Field | Description |
 |-------|-------------|
-| `event` | `"warmhub.write"`, `"warmhub.retract"`, or `"warmhub.cron"` |
+| `event` | `"warmhub.write"` or `"warmhub.retract"` |
 | `traceId`, `runId`, `subscriptionId` | Identifiers for the run and chain |
 | `repo` | `{ "orgName", "repoName" }` — the subscription's home repo |
 | `callback_url` | Endpoint to report async progress / terminal outcome |
-| `matchedOperations` | The matched operations (empty for cron) |
+| `matchedOperations` | The operations matched by the subscription filter |
 
 Headers include `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
 
@@ -157,6 +144,6 @@ const client = new WarmHubClient({
 
 - start with seed-only if no runtime work is needed
 - use an event webhook when the component reacts to writes on a shape
-- use a cron webhook only when time-based automation is genuinely needed
+- use an external scheduler to invoke the handler when time-based automation is genuinely needed
 - add a bound credential set when deliveries must be authenticated or the handler needs secrets
 - avoid mixing many subscriptions unless the component clearly benefits from several triggers
