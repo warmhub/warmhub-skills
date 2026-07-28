@@ -21,7 +21,9 @@ and ingestion plan are known. The output is a TypeScript/Bun project that:
 4. Commits in batches with dedup and conflict handling
 5. Runs QC checks that produce Assessment assertions
 6. Supports local dev and automated execution with an explicit `WH_TOKEN` PAT provider
-7. Supports webhook subscriptions and externally scheduled ingest and QC
+7. Publishes matching root `README.md` and `AGENTS.md` files as first-class repo content
+8. Records an explicit repository-license choice or an explicit decision to remain undeclared
+9. Supports webhook subscriptions and externally scheduled ingest and QC
 
 </objective>
 
@@ -82,7 +84,17 @@ bun run src/cli.ts setup
 # 5. Ingest and validate
 bun run src/cli.ts ingest --latest
 bun run src/cli.ts qc --latest
-# 6. Configure automated runs
+# 6. Draft, publish, and read back repository documentation
+wh repo content prompt <org>/<repo> --kind readme
+wh repo content prompt <org>/<repo> --kind agents
+# Draft root README.md and AGENTS.md from those prompts plus source/conversation context.
+wh repo content set <org>/<repo> --kind readme --file README.md
+wh repo content set <org>/<repo> --kind agents --file AGENTS.md
+wh repo content get <org>/<repo> --kind readme
+wh repo content get <org>/<repo> --kind agents
+# 7. Inspect license state, then follow the licensing reference for a confirmed choice or defer
+wh repo describe <org>/<repo> --json
+# 8. Configure automated runs
 # Event-driven: create a webhook subscription. Scheduled: have an external scheduler call <handler-url>.
 wh sub create source-events --repo <org>/<repo> --on SourceRecord --kind webhook --webhook-url <handler-url>
 ```
@@ -156,8 +168,9 @@ bun add @warmhub/sdk-ts
 
 Set up `tsconfig.json` with `"module": "ESNext"`, `"moduleResolution": "bundler"`, `"target": "ESNext"`.
 
-Keep generated repositories agent-neutral by default. Do not add local assistant configuration files
-unless the user explicitly asks for them.
+Keep generated repositories agent-neutral by default. Root `AGENTS.md` is portable repo operating
+guidance required by this workflow, not assistant-specific configuration. Do not add local assistant
+configuration files unless the user explicitly asks for them.
 
 See [references/project-structure.md](references/project-structure.md) for full file layout.
 
@@ -276,7 +289,61 @@ cardinality fixes before loading more data. If bad `about` targets or shape sema
 populated, use [references/migrations.md](references/migrations.md) for the retract-and-replay
 runbook before writing replacement data.
 
-## Step 9: Set Up Automation
+## Step 9: Publish Repository Documentation
+
+Create both root documentation files after the bounded ingest, QC, relationship verification, and
+representative readback have established what the repo actually contains. The CLI prompts provide
+bounded repo metadata and drafting guidance; combine that context with the approved design, source
+documentation, generated project, and relevant user conversation. The prompts are not complete
+documents and do not replace facts learned during the build.
+
+Keep the audiences distinct:
+
+- `README.md` is human orientation: purpose, source and provenance, key shapes, setup, bounded ingest,
+  QC, and reproduction commands.
+- `AGENTS.md` is repo-specific operating guidance for agents: important wrefs and shape semantics,
+  safe ingest/QC workflows, idempotency rules, mutation constraints, verification commands, and
+  known gotchas. Do not fill it with generic assistant instructions.
+
+Use the matching local file for each content kind so the generated project and WarmHub repo stay in
+sync:
+
+```bash
+# Gather drafting context from the populated repo.
+wh repo content prompt <org>/<repo> --kind readme
+wh repo content prompt <org>/<repo> --kind agents
+
+# Draft or revise these exact root files using the prompts plus build/source context.
+#   README.md
+#   AGENTS.md
+
+# Publish each file to its matching first-class content thing.
+wh repo content set <org>/<repo> --kind readme --file README.md
+wh repo content set <org>/<repo> --kind agents --file AGENTS.md
+
+# Read both values back; compare each response with its matching local file.
+wh repo content get <org>/<repo> --kind readme
+wh repo content get <org>/<repo> --kind agents
+```
+
+Do not finish the stage until `Content/Readme` matches `README.md` and `Content/Agents` matches
+`AGENTS.md`. If a set or readback fails, report the exact command and leave documentation incomplete.
+
+## Step 9a: Confirm and Verify the Repository License
+
+Follow [references/licensing.md](references/licensing.md). Start with `wh repo describe`, preserve an
+existing declaration unless the user explicitly confirms replacement, and never infer a default or
+claim legal suitability. An explicit decision to remain undeclared is valid and makes no write.
+
+For a confirmed write, inspect the exact native instance state and use only the well-known
+`LicenseDeclaration/repo` assertion about `LicenseSubject/repo`. When neither instance exists, add
+the subject and declaration atomically so the native shapes materialize lazily. Resolve a single
+SPDX identifier to a canonical pinned wref; preserve compound `OR` / `AND` / `WITH` expressions
+without a false `licenseWref`. Guard revisions with the current version, then verify the exact
+instances, `wh repo describe`, public-repo doctor output, the UI badge/panel when available, and
+README/root `LICENSE` alignment.
+
+## Step 10: Set Up Automation
 
 Deploy this repo as a handler at a public HTTPS endpoint. For event-driven runs, create a webhook
 subscription. For scheduled ingest or QC, configure an external scheduler you operate (for example,
@@ -302,12 +369,13 @@ wh sub bind source-events --credentials ingest-webhook --repo <org>/<repo>
 
 Verify: `wh sub list --repo <org>/<repo>`
 
-## Step 10: Prepare Final Repo Handoff
+## Step 11: Prepare Final Repo Handoff
 
 Do not mutate a public catalog from this skill. Prepare the terminal repo handoff material instead:
 
 - repo path and WarmHub repo identity
-- README or usage notes
+- root `README.md` / `AGENTS.md` and their `Content/Readme` / `Content/Agents` readback receipts
+- license decision plus native-instance, describe, UI, README, and root `LICENSE` receipts when declared
 - setup, first-ingest, QC, test, and relationship-verifier commands run
 - validation receipts, caveats, and skipped or blocked live checks
 - remaining credential, deployment, subscription, collector, display, or component work
@@ -336,6 +404,10 @@ fields when this is the terminal stage; otherwise include them in the next-step 
 - **Add ops are not replay-safe by themselves** — deterministic names plus conflict/idempotency logic
   make replay safe, not the `add` verb
 - **Do not cargo-cult old Convex-era batch limits** — returned WarmHub supports larger commit workflows; use semantic commit planning or `wh-commit-design` instead of hard-coding `200 ops per commit`
+- **Do not cross-wire repo content files** — publish root `README.md` only as `--kind readme` and root
+  `AGENTS.md` only as `--kind agents`; run both `get` commands and compare the readbacks before handoff
+- **License choice is human-owned** — never select a default, claim suitability, synthesize
+  attribution, or replace an existing declaration without explicit confirmation; undeclared is valid
 
 </pitfalls>
 
@@ -347,6 +419,8 @@ Return:
 - shapes and operations implemented
 - source fetch, transform, idempotency, and QC paths implemented
 - commands run for setup, first ingest, QC, tests, and validation
+- README/AGENTS prompt, publish, and readback commands run
+- license decision and declaration/alignment verification, or the explicit defer receipt
 - relationship-verifier receipts for design-time and live checks, or exact blocker
 - manifest fields updated, or exact fields the user should add
 - remaining deployment, credential, or subscription work
@@ -357,6 +431,10 @@ Return:
 - The repo can create or update shapes, ingest one bounded slice, and run QC locally.
 - The target WarmHub repo exists, the first bounded ingest has been committed to WarmHub, and
   representative facts have been read back from WarmHub.
+- Root `README.md` and `AGENTS.md` exist, are written to their matching repo content kinds, and both
+  readbacks match the local files.
+- The user explicitly chose a declaration or explicitly deferred; a declaration passes the licensing
+  reference's machine, UI-when-available, README, and root `LICENSE` checks.
 - Relationship verification passes for the approved design, or blocks before large ingest.
 - Auth uses a PAT environment variable for WarmHub writes; inbound webhook auth is handled through
   declared credentials when subscriptions are used.
@@ -366,6 +444,7 @@ Return:
 ## References
 
 - [references/project-structure.md](references/project-structure.md) — project layout.
+- [references/licensing.md](references/licensing.md) — explicit license choice, write, and verification.
 - [references/shapes-guide.md](references/shapes-guide.md) — shape conventions.
 - [references/auth-pattern.md](references/auth-pattern.md) — PAT and webhook auth.
 - [references/operations-guide.md](references/operations-guide.md) — operations, commits, idempotency.
