@@ -444,7 +444,7 @@ function checkRuntimeOneShape(shape, items) {
         failures.push({ shape: shape.name, gate: '2b', reason: `wh thing about ${aboutWref} failed: ${e.message}` });
         continue;
       }
-      const asns = result?.assertions ?? [];
+      const asns = result?.items ?? [];
       const found = asns.some((x) => stripVersionSuffix(x.wref) === stripVersionSuffix(asn.wref));
       if (!found) {
         failures.push({
@@ -506,7 +506,7 @@ function checkRuntimeOneShape(shape, items) {
         });
       }
       if (aboutResult) {
-        const asns = aboutResult.assertions ?? [];
+        const asns = aboutResult.items ?? [];
         const found = asns.some((x) => stripVersionSuffix(x.wref) === stripVersionSuffix(asn.wref));
         if (!found) {
           failures.push({

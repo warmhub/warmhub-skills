@@ -6,7 +6,9 @@ Standard file layout for a WarmHub data ingestion repo:
 my-data-repo/
 ├── package.json
 ├── tsconfig.json
-├── README.md
+├── README.md                    # Human orientation; mirror to Content/Readme
+├── AGENTS.md                    # Repo-specific agent guidance; mirror to Content/Agents
+├── LICENSE                      # Authoritative license text when explicitly declared
 ├── src/
 │   ├── cli.ts                 # CLI entry point with subcommands
 │   ├── config.ts              # Org, repo, URLs, constants

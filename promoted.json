@@ -1,41 +1,41 @@
 {
   "add-warmhub-component": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "build-warmhub-collector": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "build-warmhub-display": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "build-warmhub-repo": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "connect-warmhub-app": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "design-warmhub-repo": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "discover-warmhub-repo": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "find-self-verifying-objectives": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "modeling-foundations": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "plan-warmhub-ingestion": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "veritas-design": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "warmhub-builder": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   },
   "wh-commit-design": {
-    "source_commit": "9e0bf83b2d52a111da20570d73934ed66dc8f19a"
+    "source_commit": "965ec663641d1a505e258dd966b415f05984f907"
   }
 }
