@@ -36,7 +36,7 @@ You don't have to run all five. Even a single prompt with thoughtful feedback is
 
 **What it tests.** A domain the skill's reference library has prior knowledge of. Should produce a clean, complete design. If the skill struggles here, something is broken — this is the recall baseline.
 
-**What "good" looks like.** Design uses a Set (symmetric collection) for duplicate-of relationships and a Pair (directional) for blocks-of relationships. Treats "stale tickets" and "high-entropy tasks" as derived queries, not durable shapes. Includes a content-addressed analytical-policy shape for clustering. Caps ticket body bytes — proxies the source system, doesn't own the bytes. Walks a 5-question design-review checklist explicitly.
+**What "good" looks like.** Design uses a Bond (symmetric binary collection) for duplicate-of relationships and an Arc (directional) for blocks-of relationships. Treats "stale tickets" and "high-entropy tasks" as derived queries, not durable shapes. Includes a content-addressed analytical-policy shape for clustering. Caps ticket body bytes — proxies the source system, doesn't own the bytes. Walks a 5-question design-review checklist explicitly.
 
 ---
 
@@ -55,7 +55,7 @@ You don't have to run all five. Even a single prompt with thoughtful feedback is
 
 **What it tests.** Same structural pattern as prompt 1 but a vocabulary the skill's reference library has never seen (no ticket corpus, no duplicate clusters). Tests whether the skill applies principles or template-matches the ticket-corpus design with renamed shapes.
 
-**What "good" looks like.** Design produces fully domain-specific names (Report / Vulnerability / Incident — not TicketProxy / Cluster). Same structural disciplines as prompt 1: Set for symmetric same-vulnerability, Pair for directional exploits-in. Justifies why a canonical Vulnerability is graph-synthesized rather than just an external proxy. Triage queue and blast radius are derived queries, not durable shapes.
+**What "good" looks like.** Design produces fully domain-specific names (Report / Vulnerability / Incident — not TicketProxy / Cluster). Same structural disciplines as prompt 1: Bond for symmetric same-vulnerability, Arc for directional exploits-in. Justifies why a canonical Vulnerability is graph-synthesized rather than just an external proxy. Triage queue and blast radius are derived queries, not durable shapes.
 
 ---
 
@@ -67,7 +67,7 @@ You don't have to run all five. Even a single prompt with thoughtful feedback is
 
 **What it tests.** Naturally requires a layered design — channel proxies + theme synthesis + cross-channel relationships. Tests whether the skill recognizes layered designs and articulates the interface shapes between layers.
 
-**What "good" looks like.** Design names two distinct design layers (one for channel proxies + cross-channel relationships, one for theme synthesis) and identifies which assertions bridge the two layers. Investment priorities are a derived query, not a stored ranking shape. Cross-channel duplicate-of uses Set; blocker relationships use Pair.
+**What "good" looks like.** Design names two distinct design layers (one for channel proxies + cross-channel relationships, one for theme synthesis) and identifies which assertions bridge the two layers. Investment priorities are a derived query, not a stored ranking shape. Cross-channel duplicate-of uses Bond; blocker relationships use Arc.
 
 ---
 
@@ -79,7 +79,7 @@ You don't have to run all five. Even a single prompt with thoughtful feedback is
 
 **What it tests.** The vocabulary (messages, threads, channels) suggests an operational state-tracking domain. The actual structure is pattern-mining + external-proxy + curation. Tests whether the skill diagnoses by structure or gets pulled toward the wrong design pattern by surface terms.
 
-**What "good" looks like.** Design explicitly names the trap: Slack itself is the operational system; this graph is the analysis layer over it. Includes a graph-synthesized recurring-question concept — not just message proxies. Best-answer relationship uses Pair (directional). Same-question-as relationship uses Set (symmetric).
+**What "good" looks like.** Design explicitly names the trap: Slack itself is the operational system; this graph is the analysis layer over it. Includes a graph-synthesized recurring-question concept — not just message proxies. Best-answer relationship uses Arc (directional). Same-question-as relationship uses Bond (symmetric).
 
 ---
 
@@ -107,7 +107,7 @@ Useful signals in roughly decreasing order of value:
 
 ## Notes for context
 
-- The skill is intentionally opinionated about a few things, especially: relationship endpoints should be in `about: { pair / set / triple / list: [...] }` rather than encoded as flat string fields (because `about` is immutable and a flat field is invisible to backref queries); "needs work" / "queue" / "stale" state should be a derived query, not a durable shape; and synthesized artifacts produced by expensive (LLM, embedding, scoring) derivations should bind to a content-addressed policy shape so verdicts can be retracted en masse when the policy changes.
+- The skill is intentionally opinionated about a few things, especially: relationship endpoints should target a named collection via `about: "Arc/<name>"` or `about: "Bond/<name>"` (or `Set/`/`List/`), created by a prior named `kind:"collection"` op, rather than encoded as flat string fields (because `about` is immutable and a flat field is invisible to backref queries); "needs work" / "queue" / "stale" state should be a derived query, not a durable shape; and synthesized artifacts produced by expensive (LLM, embedding, scoring) derivations should bind to a content-addressed policy shape so verdicts can be retracted en masse when the policy changes.
 - The skill has been validated empirically (5-prompt eval battery, 49 assertions, 2 iterations) — but every additional real-world test prompt that surfaces a gap is high-value feedback.
 
 ## Where to send feedback

@@ -59,8 +59,8 @@ Veritas installs fixed component shapes:
 | Shape | Kind | Role |
 | --- | --- | --- |
 | `Certainty` | assertion | A source's BDU opinion about a binomial proposition. `source` is required. |
-| `Support` | assertion | Opinion that one assertion supports another. `about` is a directional Pair. |
-| `Opposition` | assertion | Opinion that one assertion opposes another. `about` is a directional Pair. |
+| `Support` | assertion | Opinion that one assertion supports another. New writes use a directional Arc; legacy Pair remains compatible. |
+| `Opposition` | assertion | Opinion that one assertion opposes another. New writes use a directional Arc; legacy Pair remains compatible. |
 | `Consensus` | assertion | Veritas-written derived BDU output. No `source` or `rationale`. |
 | `Oracle` | thing | Ground-truth source identity with fixed max trust. |
 
@@ -172,8 +172,9 @@ Treat `Consensus` as derived state.
 
 Current design limitations to account for:
 
-- Pair-level `Support` and `Opposition` consensus is diagnostic unless the deployed worker explicitly
+- Arc-level `Support` and `Opposition` consensus is diagnostic unless the deployed worker explicitly
   propagates it to consequent propositions.
+- `Bond` is not a valid `Support` or `Opposition` target because Veritas inference is directional.
 - Retraction of all inputs may produce vacuous consensus `(0, 0, 1)`.
 - Same-source duplicate `Certainty` on one target can block consensus. Revise instead.
 

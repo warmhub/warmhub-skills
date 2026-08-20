@@ -26,7 +26,7 @@ Use this contract for `repoDesignSummary` in `.warmhub-builder/project-state.jso
       {
         "shape": "AssertionShape",
         "fact": "fact being asserted",
-        "aboutCardinality": "single | pair | triple | set | list",
+        "aboutCardinality": "single | arc | bond | set | list",
         "aboutTarget": "single target shape or collection member roles",
         "fourDirection": {
           "subject": "pass | blocked",
@@ -53,7 +53,7 @@ Review checklist:
 - Thing shapes represent durable identities, not measurements.
 - Assertion shapes name the fact being asserted and the target they are about.
 - Every assertion shape records `aboutCardinality` and a four-direction result.
-- Relationship assertions use Pair, Triple, Set, or List when a single target would hide an endpoint.
+- Relationship assertions use Arc for directed binary edges, Bond for symmetric binary edges, and Set or List for grouping when a single target would hide an endpoint (use a named domain shape for a genuine ternary relationship).
 - Source records are modeled only when they help idempotency, replay, or provenance.
 - Reporting periods are explicit when facts repeat over time.
 - Human/mobile collection is captured in `writeModel`, even if the collector is built later.

@@ -44,7 +44,7 @@ Define a small status set up front:
 - `[F]` blocked on a missing shape or assertion family that does not yet exist.
 ```
 
-Status drives prioritization later — `[F]` queries are the pressure that earns new shapes; `[M]` queries are the pressure that earns ingestion / fixture work; `[R]` queries are existence proofs that the existing graph design works. For `[F]` relationship queries, record the future primitive contract in the query note (`about Set<TicketProxy>`, `typed wref array to Facility`, etc.). Do not leave the future shape as "Pair or field TBD."
+Status drives prioritization later — `[F]` queries are the pressure that earns new shapes; `[M]` queries are the pressure that earns ingestion / fixture work; `[R]` queries are existence proofs that the existing graph design works. For `[F]` relationship queries, record the future primitive contract in the query note (`about Bond<TicketProxy>`, `typed wref array to Facility`, etc.). Do not leave the future shape as "Arc or field TBD."
 
 ## Section organization
 

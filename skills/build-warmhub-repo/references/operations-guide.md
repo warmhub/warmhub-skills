@@ -30,14 +30,31 @@ const reviseAssertion: Operation = {
 }
 ```
 
-For collection-targeted assertions, emit the inline collection object in the `about` field:
+For collection-targeted assertions (`about` cardinality of `Arc` / `Bond` / `Set` / `List`), the
+`about` field accepts a **wref only** — an inline collection object is rejected:
+
+```
+Invalid operation ... about accepts a wref. Create the collection as its own named operation, then
+point the assertion at it.
+```
+
+Emit the collection as its own named `add` op first, then point the assertion's `about` at that
+collection wref:
 
 ```typescript
+const addCollection: Operation = {
+  operation: 'add',
+  kind: 'collection',
+  type: 'bond', // 'arc' | 'bond' | 'set' | 'list'
+  name: 'duplicate-ticket-a-ticket-b',
+  members: ['TicketProxy/a', 'TicketProxy/b'],
+}
+
 const addRelationship: Operation = {
   operation: 'add',
   kind: 'assertion',
   name: 'DuplicateAssertion/set-abc123',
-  about: { set: ['TicketProxy/a', 'TicketProxy/b'] },
+  about: 'Set/duplicate-ticket-a-ticket-b',
   data: {
     subjectWref: 'TicketProxy/a',
     objectWref: 'TicketProxy/b',
@@ -46,8 +63,16 @@ const addRelationship: Operation = {
 }
 ```
 
-Do not hand-build concrete `Pair/...` or `Set/...` wrefs for new ops. Let WarmHub create and pin the
-collection from the inline object, then verify the readback path with `--resolve-collections`.
+The collection wref the assertion points at is `<Type>/<name>` — `Arc/…`, `Bond/…`, `Set/…`,
+`List/…` — matching the collection op's `type` and `name`. Do **not** hand-invent an opaque or
+hashed collection wref that no op creates; the assertion must reference a collection op present in
+the same (or a prior) commit.
+
+Give the collection op a **deterministic, source-derived name** — e.g. derived from its sorted
+members plus the relationship kind — so re-runs resolve to the same collection wref. This
+keeps the two-op block replay-safe and lets `wh commit submit --skip-existing` no-op the collection
+and assertion on re-ingest instead of duplicating them. After committing, verify the readback path
+with `wh thing about <endpoint> --resolve-collections`.
 
 ## SDK And CLI Verb Map
 
@@ -58,7 +83,7 @@ The SDK and CLI do not always use the same verb names:
 | Read one record | `client.thing.get(org, repo, wref)` | `wh thing view <wref> --repo <org>/<repo>` |
 | Query current records | `client.thing.head`, `headAll`, `query`, or `queryAll` | `wh thing query --repo <org>/<repo>` |
 | Create a shape | `client.shape.create(...)` | `wh shape create ...` |
-| Revise a shape | `client.shape.revise(...)` | `wh shape update ...` |
+| Revise a shape | `client.shape.revise(...)` | `wh shape revise ...` |
 | Submit operations | `client.commit.apply(org, repo, message, ops, opts)` | `wh commit submit --repo <org>/<repo> --file <file> -m <message>` |
 
 There is no `wh thing get`; use `wh thing view` when translating SDK examples to CLI checks. For

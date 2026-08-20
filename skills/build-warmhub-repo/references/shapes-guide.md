@@ -136,13 +136,12 @@ for (const [name, fields] of Object.entries(SHAPES)) {
 
 ## Updating Shapes
 
-To add or change fields, use `wh shape update` with the FULL field set:
+To add or change fields, use `wh shape revise` with the FULL field set:
 
 ```bash
-wh shape update Lender --repo <org>/<repo> \
+wh shape revise Lender --repo <org>/<repo> \
   --fields '{"lender_name":"string","state":"string","city":"string","institution?":"string"}'
 ```
 
-The SDK equivalent is `client.shape.revise(org, repo, shapeName, fields)`. The CLI verb is
-`update`, while the SDK verb is `revise`; both require the complete field definition. You cannot add
-a single field incrementally.
+The SDK equivalent is `client.shape.revise(org, repo, shapeName, fields)`. Both the CLI and SDK use
+`revise` and require the complete field definition. You cannot add a single field incrementally.

@@ -166,9 +166,9 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 ### Pitfall: Context-Free Reader Mismatch
 
-**Symptom.** The graph "works" — local scripts produce the expected outputs. But a context-free MCP / agent reading the same graph reports it as missing source grounding, missing review history, missing classification. Investigation reveals: the local scripts know how to traverse `Pair.second` to the source proxy, and the context-free reader doesn't.
+**Symptom.** The graph "works" — local scripts produce the expected outputs. But a context-free MCP / agent reading the same graph reports it as missing source grounding, missing review history, missing classification. Investigation reveals: the local scripts know how to traverse an Arc's `to` endpoint to the source proxy, and the context-free reader doesn't.
 
-**Fix.** Mirror key reader-facing fields onto assertions. For a basis assertion: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey` directly on the assertion, in addition to the native `Pair` traversal. Description fields explicitly classify each field as identity / evidence / interpretation / convenience.
+**Fix.** Mirror key reader-facing fields onto assertions. For a basis assertion: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey` directly on the assertion, in addition to the native Arc traversal. Description fields explicitly classify each field as identity / evidence / interpretation / convenience.
 
 ### Pitfall: Shape Without a Question
 
@@ -192,7 +192,7 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 - One-sided traversal: `wh thing about TicketProxy/<A>` returns the DuplicateAssertion; `wh thing about TicketProxy/<B>` does not.
 - `originalWref: string` doesn't participate in `wh thing refs`, doesn't enforce identity validation, isn't version-pinned.
 
-**The canonical fix.** A `Resolution` uses `about: { pair: [Vent, ResolutionTarget] }`. Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
+**The canonical fix.** A `Resolution` uses a named Arc collection referenced via `about: "Arc/<name>"` (created by a prior `kind: "collection"` op). Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
 
 **Why it matters operationally.** `about` is **immutable**. The recovery path for a wrong arity is to retract the bad assertions and re-assert with the correct arity. The retracted assertions remain in version history but are hidden from default queries. This is workable when caught early; expensive when discovered after large data load. The four-direction test in `primitives.md` exists to catch this *before* data lands.
 
@@ -204,11 +204,13 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 If any fails because of a flat string field where a wref edge should be, you have arity mismatch.
 
-**Fix.** Choose the right collection type per `primitives.md`:
-- **Pair** for directional 2-way (A → B differs from B → A): `about: { pair: [<from>, <to>] }`.
-- **Set** for symmetric or n-way: `about: { set: [<a>, <b>, ...] }`.
-- **Triple** for ordered 3-way: `about: { triple: [<a>, <b>, <c>] }`.
-- **List** for ordered with possible duplicates: `about: { list: [<a>, <b>, ...] }`.
+**Fix.** Choose the right collection type per `primitives.md`. In every case, create a named `kind: "collection"` op first, then point the assertion's `about` at the resulting wref — `about` accepts a wref only, never an inline collection object:
+- **Arc** for directional 2-way (A → B differs from B → A): named `arc` collection op, then `about: "Arc/<name>"`.
+- **Bond** for symmetric 2-way: named `bond` collection op, then `about: "Bond/<name>"`.
+- **Set** for symmetric or n-way grouping: named `set` collection op, then `about: "Set/<name>"`.
+- **List** for ordered with possible duplicates: named `list` collection op, then `about: "List/<name>"`.
+
+For a genuine three-way relation, don't reach for a removed `triple` type — recommend a named domain shape or assertion that models the ternary relation directly; for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing, use `set` or `list` instead.
 
 Then add the mirrored convenience fields (`<subject>Wref`, `<object>Wref`, `<kind>`, `<identityKey>`) for context-free reader legibility — see `design-rules.md` § Context-Free Legibility.
 

@@ -120,6 +120,11 @@ export async function flushQueue(): Promise<{ sent: number; remaining: Submissio
     }
   }
 
-  localStorage.setItem(queueKey, JSON.stringify(remaining));
-  return { sent, remaining };
+  const pendingIds = new Set(pending.map((envelope) => envelope.idempotencyKey));
+  const queuedWhileFlushing = readQueue().filter(
+    (envelope) => !pendingIds.has(envelope.idempotencyKey),
+  );
+  const nextQueue = [...remaining, ...queuedWhileFlushing];
+  localStorage.setItem(queueKey, JSON.stringify(nextQueue));
+  return { sent, remaining: nextQueue };
 }
