@@ -1,0 +1,4 @@
+interface:
+  display_name: "Connect WarmHub App"
+  short_description: "Wire apps to WarmHub SDK, auth, and attribution"
+  default_prompt: "Use $connect-warmhub-app to connect an app or notebook to WarmHub with SDK setup, server-side token handling, a one-fact probe, sharing mode, and source attribution."

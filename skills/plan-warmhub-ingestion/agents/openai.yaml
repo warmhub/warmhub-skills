@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan WarmHub Ingestion"
+  short_description: "Plan sources, transforms, QC, and automation"
+  default_prompt: "Use $plan-warmhub-ingestion to turn a RepoDesignSummary and data sources into a cardinality-preserving ingestion plan with idempotency, backfill, provenance, QC, automation, component dependencies, and next-stage handoff."

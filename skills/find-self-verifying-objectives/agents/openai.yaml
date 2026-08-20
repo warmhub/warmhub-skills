@@ -1,0 +1,4 @@
+interface:
+  display_name: "Find Self-Verifying Objectives"
+  short_description: "Find optimizable subproblems without ground truth"
+  default_prompt: "Use $find-self-verifying-objectives to derive internal metrics, invariants, and adjacent tractable subproblems that can be optimized from collected data without external labels."

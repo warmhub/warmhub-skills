@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build WarmHub Repo"
+  short_description: "Build WarmHub ingestion repos end to end"
+  default_prompt: "Use $build-warmhub-repo to scaffold a WarmHub ingestion repo from an approved design or ingestion plan, create or verify the WarmHub repo, commit a first bounded ingest, run QC, and read facts back."

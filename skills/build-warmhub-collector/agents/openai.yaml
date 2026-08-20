@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build WarmHub Collector"
+  short_description: "Build mobile data collection apps"
+  default_prompt: "Use $build-warmhub-collector to scaffold a mobile-first WarmHub collection app with collector identity, offline queueing, provenance, QC-at-ingress, and safe write-path handoff."

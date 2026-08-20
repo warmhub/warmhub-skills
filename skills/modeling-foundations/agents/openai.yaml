@@ -1,0 +1,4 @@
+interface:
+  display_name: "Modeling Foundations"
+  short_description: "Check WarmHub modeling rigor"
+  default_prompt: "Use $modeling-foundations to check thing/assertion choices, about-cardinality, four-direction traversability, universal foundations, and modeling pitfalls."
