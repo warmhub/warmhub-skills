@@ -1,92 +1,67 @@
-# Credentials And Inbound Delivery Auth
+# Credentials and Delivery Authentication
 
-Component manifests declare credential sets up front, then bind one to a subscription so WarmHub can
-authenticate each webhook delivery to your handler.
-
-## The Current Model
-
-1. Declare credential sets in `manifest.credentials`
-2. Bind one credential set to a subscription via `subscription.credentials`
-3. Populate the set's `WEBHOOK_*` keys with `wh credential set`
-4. WarmHub attaches the corresponding auth headers to every delivery POST sent to the
-   subscription's `webhookUrl`
-
-> There is no manifest `actions` array, no `source.auth` clone step, and no per-run token injected
-> into a managed container. The handler is a service you deploy; it authenticates back to WarmHub
-> with its own `WH_TOKEN` PAT and reads any other secrets from its own deploy environment.
-
-## Declare A Credential Set
+Declare a credential set in `manifest.credentials`, then bind its single name through
+`subscriptions[].credentials`. The manifest installer creates manifest-provisioned sets; operators
+populate the values. Setup-provisioned sets are created and filled by the registered setup endpoint.
+Handler runtime secrets, including its WarmHub access token, stay in the handler's own deployment
+environment and are never injected by a subscription.
 
 ```json
 {
   "credentials": [
     {
-      "name": "digest-runtime",
-      "description": "Inbound delivery auth for the digest handler",
+      "name": "digest-webhook",
       "requiredKeys": [
-        { "key": "WEBHOOK_SIGNING_SECRET", "description": "HMAC secret for delivery signatures" }
+        { "key": "WEBHOOK_SIGNING_SECRET" }
       ]
     }
-  ]
-}
-```
-
-## Bind The Credential Set To The Subscription
-
-```json
-{
+  ],
   "subscriptions": [
     {
       "name": "incident/process-event",
       "trigger": { "kind": "event", "shape": "IncidentEvent" },
       "webhookUrl": "https://handler.example.com/incident/process",
-      "credentials": ["digest-runtime"]
+      "credentials": ["digest-webhook"]
     }
   ]
 }
 ```
 
-If `subscription.credentials` is omitted, deliveries are sent without auth headers and your handler
-cannot cryptographically confirm the caller.
+One credential set is the current subscription limit. Valid primary-delivery keys are
+`WEBHOOK_BEARER_TOKEN`, `WEBHOOK_API_KEY` (plus optional `WEBHOOK_API_KEY_HEADER`),
+`WEBHOOK_BASIC_USERNAME` plus `WEBHOOK_BASIC_PASSWORD`, and `WEBHOOK_SIGNING_SECRET`. Equivalent
+`FALLBACK_*` keys authenticate only fallback notifications.
 
-## Supported `WEBHOOK_*` Keys
+## Signing verification
 
-| Credential key | Header WarmHub sends on each delivery |
-|----------------|----------------------------------------|
-| `WEBHOOK_BEARER_TOKEN` | `Authorization: Bearer <value>` |
-| `WEBHOOK_API_KEY` (+ optional `WEBHOOK_API_KEY_HEADER`) | `X-API-Key: <value>` (or the custom header name) |
-| `WEBHOOK_BASIC_USERNAME` + `WEBHOOK_BASIC_PASSWORD` | `Authorization: Basic <base64>` |
-| `WEBHOOK_SIGNING_SECRET` | `X-WarmHub-Signature` (HMAC-SHA256 over `timestamp.body`) + `X-WarmHub-Timestamp` |
+With `WEBHOOK_SIGNING_SECRET`, WarmHub dual-signs a delivery when it has a stable webhook message
+ID. Preserve the exact raw body and use constant-time comparison with a freshness window.
 
-Pick one scheme. Signing is the most robust because it binds the auth to the request body.
+- Standard Webhooks: `webhook-id`, `webhook-timestamp`, and `webhook-signature`. Verify a matching
+  `v1,<base64>` entry (the header can list more than one) over
+  `<webhook-id>.<webhook-timestamp>.<raw-body>`. A `whsec_` secret is decoded as Standard Webhooks
+  key material when it is valid base64; otherwise it uses raw bytes.
+- Native compatibility headers: `X-WarmHub-Signature: sha256=<hex>` and `X-WarmHub-Timestamp`.
+  Verify HMAC-SHA256 over `<timestamp>.<raw-body>` with the secret's raw UTF-8 bytes.
 
-## Operator Setup Commands
+The header-family rule prevents downgrade attacks: all three Standard Webhooks headers present means
+verify that family authoritatively; a partial Standard Webhooks set is invalid; only when none are
+present may a handler verify the native pair. Never fall back to native verification after a present
+Standard Webhooks signature fails. Fallback deliveries follow the same dual-signing rule when a
+stable message ID and `FALLBACK_SIGNING_SECRET` are available.
 
-Create the credential set once, then populate keys:
+WarmHub has no dual-secret rotation window. Make the handler accept old and new secrets, update the
+credential value, then remove the old secret after confirmed delivery.
 
-```bash
-wh credential create digest-runtime --repo acme/platform
-echo "<shared-secret>" | wh credential set digest-runtime WEBHOOK_SIGNING_SECRET --repo acme/platform
-wh sub bind incident/process-event --credentials digest-runtime --repo acme/platform
-```
+## Binding loss is not one behavior
 
-Notes:
-- `wh credential create` creates an empty set
-- keys are added with `wh credential set`
-- `wh sub bind` attaches the set to an existing subscription (manifest install does this for declared
-  subscriptions automatically)
+- **Revoked credential set:** fail closed. No primary or fallback outbound delivery is sent; a
+  transient credential-resolution error is retryable.
+- **Deleted credential set:** treated as no binding. Future delivery continues unsigned and without
+  injected auth headers.
+- **Unbound credential set:** also treated as no binding. Future delivery continues unsigned and
+  without injected auth headers.
 
-## Handler Secrets
-
-The handler's own runtime secrets (model API keys, downstream tokens, its `WH_TOKEN` PAT) live in the
-handler's deploy environment — they are **not** delivered by WarmHub. Only the `WEBHOOK_*` keys above
-affect the delivery itself.
-
-## Validation Checklist
-
-Before shipping a secret-backed subscription, confirm:
-- the bound set exists in `manifest.credentials`
-- `subscription.credentials` contains at most one set
-- the set's `requiredKeys` use supported `WEBHOOK_*` names
-- the handler verifies the matching header/signature on every request
-- `wh component validate ./component` passes cleanly
+Revoke rather than delete a set when deliveries must stop. Operators bind or unbind existing
+subscriptions with `wh sub bind <name> --credentials <set>` and `wh sub unbind <name>`; declared
+manifest bindings are applied at install/reconcile.

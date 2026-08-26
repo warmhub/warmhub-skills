@@ -1,53 +1,59 @@
 # App Connection
 
-Use this reference to connect a TypeScript app, server-rendered route, Worker, report generator, or
-notebook to WarmHub.
+## MCP-capable agents
 
-## Baseline Steps
+For agent-native integration, connect the client to `POST ${WARMHUB_API_URL}/mcp` (production:
+`https://api.warmhub.ai/mcp`). This is one global endpoint and one catalog: repository tools receive
+`orgName` and `repoName` as arguments. Do not configure a repo-scoped MCP URL or catalog.
 
-1. Create or enter the smallest project for the selected runtime.
-2. Install the public SDK when the runtime can use it:
+`initialize`, `tools/list`, and OAuth discovery work before authentication. Let standards-compliant
+clients follow the RFC 9728 `WWW-Authenticate: Bearer resource_metadata=...` challenge from a
+builder-tool `401` (or a `GET /mcp` probe) to protected-resource metadata and OAuth. Clients without
+that flow may send a PAT as a Bearer token from their secret store; never place it in agent prompts,
+logs, or committed client configuration as a raw value.
 
-   ```bash
-   bun add @warmhub/sdk-ts
-   ```
+Anonymous calls can read public data. A missing, malformed, or unverified Bearer token falls back to
+that anonymous tier, so listed builder tools may first return the authentication challenge. Do not
+infer that a repo is public from an anonymous miss: private targets can look not-found and should
+prompt authentication. Use `warmhub_capabilities` to orient the agent and `warmhub_repo_describe`
+after it has the repo locator; do not hard-code the tool catalog. MCP supports ordinary repository
+creation/content/metadata and some organization metadata, but not membership, role, or archive
+administration; use the CLI or SDK for those absent operations.
 
-3. Configure:
-   - `WARMHUB_API_URL` for the API endpoint when the default is not enough.
-   - `WARMHUB_REPO` as `org/repo`.
-   - `WH_TOKEN` as a server-side secret or local-only env var.
-4. Prove one fact from WarmHub before adding display or collector logic.
+For an MCP-only connection, stop after initialization, discovery, and the intended anonymous or
+authenticated probe succeeds. Continue below only when the project also has a direct app read path.
 
-## TypeScript Probe
+## Direct app SDK baseline
 
-Adapt to the app's existing structure and SDK version. Keep the probe server-side.
+Use the SDK native to the runtime: `warmhub` is a first-class option for Python services,
+notebooks, and reports; `@warmhub/sdk-ts` is natural for TypeScript apps. Keep reads server-side
+whenever credentials are needed.
 
-```typescript
-import { WarmHubClient } from '@warmhub/sdk-ts'
+1. Set `WARMHUB_REPO` to `org/repo` and, when needed, `WARMHUB_API_URL`.
+2. Install `warmhub` (`pip install warmhub`) or `@warmhub/sdk-ts` (`bun add @warmhub/sdk-ts`).
+3. Keep `WH_TOKEN` in a server/local secret store. Omit it only for a small anonymous public probe.
+4. Fetch one stable fact (repo metadata, shapes, or one known thing) before adding a display or
+   collector.
 
-function repoParts(): { org: string; repo: string } {
-  const value = process.env.WARMHUB_REPO
-  if (!value) throw new Error('WARMHUB_REPO is required')
-  const [org, repo] = value.split('/')
-  if (!org || !repo) throw new Error('WARMHUB_REPO must be org/repo')
-  return { org, repo }
-}
+Use the installed SDK's current method names. Python's `WarmHubClient.from_env()` reads `WH_TOKEN`;
+construct `WarmHubClient(...)` directly for intentional anonymous access. In TypeScript, provide an
+`auth.getToken` callback only on the server.
 
-export function createWarmHubClient(): WarmHubClient {
-  return new WarmHubClient({
-    auth: {
-      getToken: async () => {
-        const token = process.env.WH_TOKEN
-        if (!token) throw new Error('WH_TOKEN is required')
-        return token
-      },
-    },
-  })
-}
-```
+## Ordinary reads
 
-Then fetch one stable fact, such as repo metadata, a shape list, or the first page of a known shape.
-Use the app's actual SDK version for method names; do not guess beyond the installed package's API.
+Use SDK iterators for scans (`head_iter` / `query_iter` in Python; `headIter` / `queryIter` in
+TypeScript). Use the corresponding `*All` helper only when the result is bounded with its maximum
+option. Do not hand-roll cursor loops for ordinary reads.
+
+Anonymous public reads are intentionally small probes: at most 25 items per page and two pages.
+Use authenticated `repo:read` access for complete datasets, private data, or any normal scan.
+
+## Durable projection handoff
+
+This skill stops after a one-fact connection probe. When that connection will back a long-lived
+projection, follow
+[read-patterns.md](../../build-warmhub-display/references/read-patterns.md) for incremental
+eligibility, checkpoint persistence, replay, and reconciliation.
 
 ## Runtime Notes
 

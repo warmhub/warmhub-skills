@@ -35,6 +35,15 @@ the server side and emits only public-safe output.
 - For notebooks, use environment variables or a local secrets manager; do not publish secret-backed
   notebooks.
 
+## Least-privilege read option
+
+When an operator needs to expose only a stable subset, they may store a View and, where View-backed
+grant serving and issuance are enabled for that repo, issue a scoped read grant against that View.
+This is optional configuration by a repo-authorized operator, not an app feature to assume is
+available. The app receives only the resulting read access: it does not gain backend, write, or
+admin authority. Use normal authenticated `repo:read` access when that path is unavailable or a
+complete dataset is required.
+
 ## Display Safety
 
 Classify data as:

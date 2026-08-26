@@ -39,6 +39,13 @@ app-name/
 Use `add-warmhub-component` when refresh/projection automation needs a reusable component. Keep this
 display branch focused on the app surface and derived read model.
 
+## Read And Projection Choice
+
+Follow [read-patterns.md](read-patterns.md). Keep a one-shot server read or static snapshot when it
+answers the app; introduce an incremental Supabase projection only for a long-lived derived model.
+Use a stored View plus View-backed grant only for a repeatable non-incremental subset. Incremental
+reads require unrestricted repository read authority.
+
 ## Validation
 
 - Local app can fetch a WarmHub repo through a server-side route.

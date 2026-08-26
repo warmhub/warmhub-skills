@@ -29,23 +29,13 @@ async function loadActivities(
   periodWref: string,
 ): Promise<Array<Record<string, unknown>>> {
   const activities: Array<Record<string, unknown>> = []
-  let cursor: string | undefined
 
-  do {
-    const page = await client.thing.query(org, repo, {
-      shape: 'MyActivity',
-      kind: 'assertion',
-      limit: 500,
-      cursor,
-    })
-
-    for (const item of page.items) {
-      const data = item.data as Record<string, unknown> | undefined
-      if (data?.period === periodWref) activities.push(data)
-    }
-
-    cursor = page.nextCursor
-  } while (cursor)
+  for await (const item of client.thing.queryIter(org, repo, {
+    shape: 'MyActivity', kind: 'assertion', limit: 500,
+  })) {
+    const data = item.data as Record<string, unknown> | undefined
+    if (data?.period === periodWref) activities.push(data)
+  }
 
   return activities
 }
@@ -61,20 +51,14 @@ async function runQcChecks(
   const existingAssessments = new Set<string>()
   let summary: Record<string, unknown> | null = null
 
-  const about = (await client.thing.about(org, repo, periodWref)) as {
-    assertions?: Array<{
-      name: string
-      shapeName: string
-      data: Record<string, unknown>
-    }>
-  }
+  const about = await client.thing.aboutAll(org, repo, periodWref, { max: 10_000 })
 
-  for (const item of about.assertions ?? []) {
+  for (const item of about) {
     if (item.shapeName === 'Assessment') {
       existingAssessments.add(`Assessment/${item.name}`)
     }
     if (item.shapeName === 'ProgramSummary') {
-      summary = item.data
+      summary = item.data as Record<string, unknown>
     }
   }
 
@@ -145,7 +129,8 @@ function toAssessmentOp(
 
 ## Partial Data Policy
 
-The current query surfaces are paginated, so QC should normally page until `nextCursor` is empty.
+The current query surfaces are paginated, so QC should normally use the SDK iterator until it is
+exhausted.
 Only report partial-data uncertainty when you intentionally stop early or impose a tighter local
 bound for cost reasons.
 

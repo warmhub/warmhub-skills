@@ -39,15 +39,15 @@ Every v2 assertion (and every cascade-rewritten dependent) carries a `migratedFr
 
 For the cascade — the rewritten CertaintyOpinion / ReviewEvent / Critique now pointing at the v2 assertion — `migratedFrom` points at the v1 dependent that originally targeted the retracted v1 assertion. Each cascade level preserves its own lineage.
 
-### 3. Per-thing commits with pre-validated ops
+### 3. Per-thing submissions with server-validated ops
 
-Each v1 thing's full cascade — write v2 + cascade-rewrites, then retract v1 + dependents — lands in a **single `wh commit submit --ops` call**. Per-thing granularity is the right scope; per-migration atomicity (one commit for N things) is usually impractical at scale.
+Each v1 thing's full cascade — write v2 + cascade-rewrites, then retract v1 + dependents — lands in a **single `wh commit submit --ops` call**. Per-thing granularity is the right scope; one submission for N things is usually impractical at scale.
 
-**Important caveat on atomicity.** `wh commit submit --ops` is **per-op validated, not per-commit atomic**. If one op in the array fails validation (missing required field, malformed wref, shape conformance violation), the *other ops in the same call may still apply* — and the exit code reflects the worst-case op, not the per-op outcome. Don't trust the commit-level success signal alone.
+**Important caveat on atomicity.** `wh commit submit --ops` is **per-op validated, not per-commit atomic**. If one op in the array fails validation (missing required field, malformed wref, shape conformance violation), the *other ops in the same call may still apply*. A real submit exits non-zero only when every operation fails; a partial failure exits 0. Don't trust the commit-level success signal alone. (`--dry-run` exits on the worst diagnostic.)
 
 Discipline that follows from this:
 
-- **Pre-validate every op in the array against the v2 shape contract before submitting.** Read the v2 shape definition; for every op, check that all required fields are present and types match. Catch the gap in your script, not in the backend's per-op rejection. (See "What Can Go Wrong" § new required v2 fields below — this is the most common cause of partial-apply.) A native `wh` validate primitive could catch this client-side, turning this discipline into a single CLI call rather than client-side reimplementation.
+- **Preflight the complete bounded array with the server evaluator before submitting.** Write the planned ops to `group.json` and run `wh commit submit --repo <repo> --file group.json --dry-run -m "Migrate …"`; or use `client.commit.validate(...)`. It returns ordered server validation results without persisting state, receipts, or a reservation. Inspect every result, then submit the same group. Split a group before preflight if it exceeds 10,000 operations or 4 MiB.
 - **Verify post-commit state explicitly.** After `wh commit submit`, query `wh thing view <v2-wref>` and `wh assertion view <v1-wref>` to confirm the v2 thing exists and the v1 was retracted. Don't infer from the exit code.
 - **Make the migration script idempotent at the thing level**, so a partial-apply on one thing can be re-run safely. Deterministic v2 names (Move 1) make this work — a second run sees the v2 exists, skips the write, and retries any retraction that didn't land.
 
@@ -62,7 +62,7 @@ wh assertion list --about <v1-wref> --repo <repo>
 For each dependent, **its own `about` is immutable too** — so it can't be re-targeted at the v2 assertion. Each must be:
 
 1. Replicated as a v2 assertion targeting the v2 form, with `migratedFrom: <v1-dependent-wref>`.
-2. Retracted in the same atomic commit.
+2. Retracted in the same per-thing submission.
 
 The cascade can be multi-level: a CertaintyOpinion targets the v1 assertion; a Critique targets that CertaintyOpinion; a ReviewEvent targets that Critique. Recurse, with a cycle guard.
 
@@ -76,7 +76,7 @@ Concrete case from a real production migration. Starting state (verified before 
 - 1 dependent `CertaintyOpinion/cert-19101a0fcc30826d` with `about: DuplicateAssertion/dup-19101a0fcc30826d` and BDU `(b: 0.7, d: 0.1, u: 0.2, a: 0.5)`.
 - 1 dependent `ReviewEvent/rev-19101a0fcc30826d` with `about: DuplicateAssertion/dup-19101a0fcc30826d` and reviewer + note.
 
-Single-thing migration emits **7 atomic ops** in one `wh commit submit --ops`. The v2 `about` is a
+Single-thing migration emits **7 ordered ops** in one `wh commit submit --ops`. The v2 `about` is a
 `Set`, and `about` accepts a wref only — so the `Set` collection is its own named op, emitted before
 the assertion that points at it:
 
@@ -104,7 +104,7 @@ the assertion that points at it:
 ```
 
 Order matters: the `Set` collection first (so the assertion's `about` wref resolves), then the
-writes (so the v2 backrefs are live before any retract executes), retractions last. **`wh commit submit` is not all-or-nothing on validation failure** — pre-validate the entire ops array against the v2 shapes before submitting (see Move 3 above), and verify post-commit state by reading back, not by trusting the exit code. With idempotent v2 names (Move 1), a partial-apply on one thing is safe to re-run.
+writes (so the v2 backrefs are live before any retract executes), retractions last. **`wh commit submit` is not all-or-nothing on validation failure** — run the bounded server preflight in Move 3, then verify post-submit state by reading back, not by trusting the exit code. With idempotent v2 names (Move 1), a partial-apply on one thing is safe to re-run.
 
 The hash `7c8b57255900e95f` is `sha256(sortedWrefs(A, B) + "DuplicateAssertion")[:16]`. The `Set` collection reuses the same member-derived hash, so both `Set/dup-set-7c8b57255900e95f` and `DuplicateAssertion/dup-set-7c8b57255900e95f` are deterministic. Re-running the migration sees the v2 assertion already exists (`wh assertion view` returns it) and the collection already pinned; the v1 assertion is already retracted; the entire 7-op block is a no-op (and `--skip-existing` collapses it cleanly).
 
@@ -138,7 +138,7 @@ Before you trust your migration to land cleanly:
 - **Concurrent v1 writes during migration.** A new v1-pattern assertion gets written while the migration is running. The migration won't see it; it'll be left as v1 detritus. Mitigation: update the assertion-emitting scripts to v2 *before* running the migration so no new v1 things can be written, or run the migration in a loop until the v1 set is stable empty.
 - **External tooling that filters retracted things.** The graph's retracted assertions are still visible via `--include-retracted`, but tooling that doesn't pass that flag will see the v1 disappear and may be confused. Document the migration window; consumers may need to update their queries to reference v2 wrefs explicitly or to pass `--include-retracted`.
 - **New required v2 fields + cascade-rewrite = partial-apply hazard** *(common; surfaced from real migrations)*. When a v2 shape adds fields that weren't on v1, the cascade-rewrite step (which copies v1 data verbatim onto the v2 form) produces v2 assertions missing the new required fields. The backend validates per-op and rejects the bad op — but the rest of the same `wh commit submit --ops` call may still apply, leaving partial state. Two mitigations applied together: **(a)** when revising a shape with v1 data in flight, mark genuinely-optional new fields as optional (`?` suffix in WarmHub shape syntax) rather than required; **(b)** have the migration script's cascade-rewrite explicitly inject sensible defaults for any v2 field not present in v1. Don't rely on backend rejection to catch the gap — by the time it rejects, partial state has landed.
-- **`wh commit submit` is per-op-validated, not per-commit-atomic** *(surprising; surfaced from real migrations)*. A validation failure on one op does **not** roll back the other ops in the same commit. The exit code reflects the worst-case op, not the per-op outcome. Mitigation: pre-validate every op in the array against the v2 shape contract before submitting `wh commit submit`; verify post-commit state by reading back with `wh thing view` / `wh assertion view`; don't trust the exit code. Idempotent v2 names (Move 1) make per-thing re-runs safe when partial-apply happens. A native `wh ops validate` primitive could catch this client-side.
+- **`wh commit submit` is per-op-validated, not per-commit-atomic** *(surprising; surfaced from real migrations)*. A validation failure on one op does **not** roll back the other ops in the same commit. A real submit exits non-zero only when every operation fails; a partial failure exits 0. (`--dry-run` exits on the worst diagnostic.) Mitigation: use `wh commit submit --dry-run` for the complete bounded group, inspect every result, then verify post-submit state with `wh thing view` / `wh assertion view`; don't trust the exit code. Idempotent v2 names (Move 1) make per-thing re-runs safe when partial-apply happens.
 - **`whlr:` locator URIs after referenced-shape revisions** *(surfaced from real migrations)*. When a thing or assertion references something whose shape has been revised, the wref may come back as an opaque `whlr:UUID` form rather than the canonical name. The CLI rejects `whlr:` URIs in most contexts except `wh thing refs --outbound`. Migration scripts that read v1 data with refs to shape-revised things must resolve the UUIDs via `wh thing refs --outbound <wref>` before using them in new ops; failing to do so produces ops that the backend rejects as malformed.
 
 ---
@@ -148,7 +148,7 @@ Before you trust your migration to land cleanly:
 - **Mutating `about` directly via `wh assertion revise`.** The backend rejects; `about` is immutable. The discipline is to never even try.
 - **Re-targeting dependents by writing a new `about` to them.** Same constraint — every assertion's `about` is immutable, including for the cascade-dependent assertions.
 - **Non-deterministic v2 names** (timestamps, random ids, run-batch ids, sequence numbers in the v2 wref). Re-runs duplicate. Always derive from canonical-sorted members + shape name.
-- **Skipping the cascade retraction.** Leaves dependents pointing at retracted v1 assertions. The dependents' BDU / review history is now anchored to retracted state; queries that walk the cascade get stale answers. Always retract dependents in the same atomic commit.
+- **Skipping the cascade retraction.** Leaves dependents pointing at retracted v1 assertions. The dependents' BDU / review history is now anchored to retracted state; queries that walk the cascade get stale answers. Always retract dependents in the same per-thing submission.
 - **Merging shape and data migration into one commit.** If the data migration fails partway, you can't tell whether the shape is in a useable state. Keep them as separate atoms.
 
 ---
@@ -169,7 +169,9 @@ if (!DRY_RUN && !COMMIT) {
   process.exit(1);
 }
 
-const v1Assertions = await wh.assertion.list({ shape: "DuplicateAssertion", repo });
+// `client` is an authenticated WarmHubClient; `org` and `repo` name the target.
+// These read helpers wrap `wh thing query` / `wh thing view` for the target repo.
+const v1Assertions = await listAssertions({ shape: "DuplicateAssertion" });
 
 for (const v1 of v1Assertions) {
   // Skip already-migrated things (the v1 about is a single-thing wref;
@@ -184,10 +186,10 @@ for (const v1 of v1Assertions) {
   const v2Wref = `DuplicateAssertion/dup-set-${v2Hash}`;
 
   // Idempotency: skip if v2 already exists.
-  if (await wh.assertion.exists(v2Wref)) continue;
+  if (await assertionExists(v2Wref)) continue;
 
   // Enumerate dependents to cascade.
-  const dependents = await wh.assertion.list({ about: v1.wref });
+  const dependents = await listAssertions({ about: v1.wref });
   const ops = [
     // about accepts a wref only — create the Set collection first, then point at it.
     collectionOp('set', setName, members),
@@ -199,10 +201,18 @@ for (const v1 of v1Assertions) {
     ...dependents.map(d => retractOp(d.wref)),
   ];
 
+  const message = `Migrate ${v1.wref} → ${v2Wref}`;
+  const preview = await client.commit.validate(org, repo, ops, {
+    message, skipExisting: true,
+  });
+  if (!preview.canCommit) {
+    console.error(`preflight failed for ${v1.wref}:`, preview.operations);
+    continue;
+  }
   if (DRY_RUN) {
-    console.log(`would emit ${ops.length} ops for ${v1.wref}:`, ops);
+    console.log(`would submit ${ops.length} validated ops for ${v1.wref}`);
   } else {
-    await wh.commit.create({ ops, message: `Migrate ${v1.wref} → ${v2Wref}` });
+    await client.commit.apply(org, repo, message, ops, { skipExisting: true });
   }
 }
 ```

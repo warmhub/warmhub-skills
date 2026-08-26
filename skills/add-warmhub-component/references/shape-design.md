@@ -69,25 +69,11 @@ values or feature flags.
         "maxItems": 20
       }
     }
-  ],
-  "health": {
-    "requires": {
-      "things": ["ComponentConfig/incident-digest"]
-    }
-  }
+  ]
 }
 ```
 
 Do not declare `ComponentConfig` in `manifest.shapes`; it is system-managed.
-
-## Health-Friendly Shape Design
-
-Include enough structure that `wh component doctor` can verify the component meaningfully.
-
-Good targets for `health.requires`:
-- core shapes the component owns
-- config things the action must read
-- subscriptions that must remain active
 
 ## Practical Checklist
 
@@ -96,4 +82,3 @@ Before freezing the manifest, verify:
 - each subscription trigger shape has a separate output destination
 - config is either a built-in `ComponentConfig` thing or a clearly owned custom shape
 - action code can derive every needed field from declared shapes and config
-- health requirements reference real shape names and wrefs

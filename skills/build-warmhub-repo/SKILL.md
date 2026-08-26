@@ -2,7 +2,7 @@
 name: build-warmhub-repo
 description: >
   Build a complete WarmHub data ingestion repo from a RepoDesignSummary, ingestion plan, or approved
-  repo design. Use when scaffolding the Bun and TypeScript project, implementing shapes, source
+  repo design. Use when scaffolding an ingestion project, implementing shapes, source
   fetches, WarmHub operations, QC checks, PAT auth, webhook handlers, webhook subscriptions, or a
   verified first ingest into a real WarmHub repo. Trigger phrases: "build warmhub repo", "scaffold
   warmhub repo", "implement this ingestion plan", "build an ingestion pipeline", "ingest data into
@@ -14,7 +14,7 @@ description: >
 <objective>
 
 Guide the user through building a production-ready WarmHub data ingestion repo after the repo model
-and ingestion plan are known. The output is a TypeScript/Bun project that:
+and ingestion plan are known. The output is an implementation project that:
 1. Defines WarmHub shapes for the domain
 2. Fetches and parses data from an external source
 3. Transforms rows into WarmHub operations (things + assertions)
@@ -68,23 +68,54 @@ QC policy, or source access are still unresolved, stop and hand off to `design-w
 node --version  # must be >= 22
 npm install -g @warmhub/cli
 wh auth login
-wh token create --name my-data-ingest --scope repo:write
-export WH_TOKEN="<token-from-command>"
 
-# 1. Scaffold project
-mkdir my-data-repo && cd my-data-repo
+# 1. Create the project
+mkdir my-data-repo
+```
+
+Initialize the project with either:
+
+```bash
+# TypeScript/Bun
+cd my-data-repo
 bun init -y
-# 2. Install the SDK
 bun add @warmhub/sdk-ts
-# 3. Set up shapes, auth, CLI, operations, QC
-# (see workflow below)
-# 4. Create WarmHub repo and shapes
+```
+
+```bash
+# Python
+cd my-data-repo
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install warmhub
+```
+
+After creating the project-local CLI described in Step 7, create the repository and run its commands.
+These invoke code in the generated project, not the `wh` CLI:
+
+```bash
 wh repo create <org>/<repo> -d "initial" --visibility private
+wh token create --name my-data-ingest --scope <org>/<repo>=repo:write --expires 90d
+export WH_TOKEN="<token-from-command>"
+```
+
+```bash
+# TypeScript/Bun
 bun run src/cli.ts setup
-# 5. Ingest and validate
 bun run src/cli.ts ingest --latest
 bun run src/cli.ts qc --latest
-# 6. Draft, publish, and read back repository documentation
+```
+
+```bash
+# Python
+python -m pip install -e .
+python -m repo_ingest.cli setup
+python -m repo_ingest.cli ingest --latest
+python -m repo_ingest.cli qc --latest
+```
+
+```bash
+# Draft, publish, and read back repository documentation
 wh repo content prompt <org>/<repo> --kind readme
 wh repo content prompt <org>/<repo> --kind agents
 # Draft root README.md and AGENTS.md from those prompts plus source/conversation context.
@@ -92,9 +123,9 @@ wh repo content set <org>/<repo> --kind readme --file README.md
 wh repo content set <org>/<repo> --kind agents --file AGENTS.md
 wh repo content get <org>/<repo> --kind readme
 wh repo content get <org>/<repo> --kind agents
-# 7. Inspect license state, then follow the licensing reference for a confirmed choice or defer
+# Inspect license state, then follow the licensing reference for a confirmed choice or defer
 wh repo describe <org>/<repo> --json
-# 8. Configure automated runs
+# Configure automated runs
 # Event-driven: create a webhook subscription. Scheduled: have an external scheduler call <handler-url>.
 wh sub create source-events --repo <org>/<repo> --on SourceRecord --kind webhook --webhook-url <handler-url>
 ```
@@ -155,24 +186,22 @@ Use Node 22 or newer. Install and authenticate the WarmHub CLI before creating t
 ```bash
 npm install -g @warmhub/cli
 wh auth login
-wh token create --name my-data-ingest --scope repo:write
+```
+
+After creating the target repo, create its scoped token:
+
+```bash
+wh token create --name my-data-ingest --scope <org>/<repo>=repo:write --expires 90d
 export WH_TOKEN="<token-from-command>"
 ```
 
-Initialize with Bun and install the public npm SDK:
-
-```bash
-bun init -y
-bun add @warmhub/sdk-ts
-```
-
-Set up `tsconfig.json` with `"module": "ESNext"`, `"moduleResolution": "bundler"`, `"target": "ESNext"`.
+Follow [references/project-structure.md](references/project-structure.md) for layout and dependencies.
+TypeScript uses ESNext modules with bundler resolution. Python requires 3.10+ and uses
+`WarmHubClient.from_env()` for `WH_TOKEN` authentication.
 
 Keep generated repositories agent-neutral by default. Root `AGENTS.md` is portable repo operating
 guidance required by this workflow, not assistant-specific configuration. Do not add local assistant
 configuration files unless the user explicitly asks for them.
-
-See [references/project-structure.md](references/project-structure.md) for full file layout.
 
 ## Step 3: Define Shapes
 
@@ -184,7 +213,7 @@ Key conventions:
 - **Relationship assertions** use the approved `aboutCardinality` from `RepoDesignSummary`; do not
   collapse hidden endpoints into flat string fields
 - Optional fields use `?` suffix: `"institution?": "string"`
-- Always include: `ReportingPeriod`, `ProgramSummary` (or domain equivalent), `IngestRecord`, `Assessment`
+- Implement the approved design's equivalents. If it lacks an idempotency-record or QC shape, return to design.
 - Use only live-verified field forms from the pinned vocabulary: `string`, `number`, `boolean`,
   `wref`, and native arrays. Register shapes before the first write that depends on them.
 
@@ -196,8 +225,8 @@ the deployed handler that receives webhook subscriptions or external scheduler c
 
 - **WH_TOKEN env var** — a PAT created via `wh token create`, used for local dev, CI, and the
   webhook handler.
-- **SDK token wiring** — the SDK does not read `WH_TOKEN` automatically. Create the client with
-  `auth.getToken` or `accessToken`; the env var is only the convention your code reads from.
+- **SDK token wiring** — the TypeScript SDK does not read `WH_TOKEN` automatically; provide
+  `auth.getToken` or `accessToken`. Python's explicit `WarmHubClient.from_env()` constructor reads it.
 
 Inbound webhook deliveries (WarmHub → your handler) are authenticated separately, via a bound
 credential set, not via WH_TOKEN. Managed in-platform action execution and per-run stdin tokens were
@@ -212,10 +241,14 @@ See [references/operations-guide.md](references/operations-guide.md) for the com
 
 Key concepts:
 - **Prefer semantic commits**: Start with one natural unit per commit (for example one reporting period) when it fits comfortably.
-- **Use paginated reads for dedup/QC**: `thing.head()` and `thing.query()` default to 50 items and support `cursor`; page through results instead of assuming a hard 1000-item ceiling.
+- **Use SDK pagination helpers for dedup/QC**: TypeScript uses `thing.headIter()` / `queryIter()` or bounded `headAll()` / `queryAll()`; Python uses `repo.things.head_iter()` / `query_iter()` or bounded `head_all()` / `query_all()`.
 - **Escalate large commit planning deliberately**: If a period or backfill becomes large enough that partitioning, resumability, or commit sizing is non-trivial, switch to `wh-commit-design` before coding the ingest path.
 - **Conflict isolation is optional**: Split entity adds from assertions only when you need cleaner retry semantics around existing things.
 - **Idempotency**: Hash the source artifact. Skip if IngestRecord exists with the same hash.
+- **Preflight and recovery**: Run `wh commit submit --dry-run` or `client.commit.validate` only on a
+  bounded group; it reserves nothing. Use client-grouped JSONL with stable submission identity and
+  `--skip-existing` for bulk adds, retain exact receipts, and stop to recover a receipt after an
+  ambiguous transport outcome. See `operations-guide.md`.
 - **Local-green is not live-green**: after shape setup, write a representative 100-1000 row toy slice
   before any large ingest. Verify per-shape counts, `wh repo describe`, and the load-bearing
   traversals/readbacks the design promised.
@@ -237,25 +270,34 @@ Structure the CLI with subcommands:
 - `backfill` — ingest all historical periods
 - `qc --latest | --period <label>` — run quality checks
 
-For local and CI use, the subcommands run directly. Webhook handlers parse WarmHub delivery payloads
-and dispatch the matching command — see `readDeliveryInput()` in
-[references/auth-pattern.md](references/auth-pattern.md). External schedulers call the handler's
-ingest or QC route directly.
+For local and CI use, the subcommands run directly. The externally deployed webhook handler authenticates
+the raw delivery before parsing, deduplicates its delivery identity, then dispatches the matching
+command — see [references/auth-pattern.md](references/auth-pattern.md). External schedulers call the
+handler's ingest or QC route directly.
 
 ## Step 8: Create the WarmHub Repo and Run
 
+Create the repo, then run its project-local CLI:
+
 ```bash
-# Create repo
 wh repo create <org>/<repo> -d "initial repo" --visibility private
+```
 
-# Create shapes
+```bash
+# TypeScript/Bun only
+# Project-local CLI created in Step 7
 bun run src/cli.ts setup
-
-# Run initial ingest
 bun run src/cli.ts ingest --latest
-
-# Run QC
 bun run src/cli.ts qc --latest
+```
+
+```bash
+# Python only
+# Project-local CLI created in Step 7
+python -m pip install -e .
+python -m repo_ingest.cli setup
+python -m repo_ingest.cli ingest --latest
+python -m repo_ingest.cli qc --latest
 ```
 
 Read back representative records before reporting success:
@@ -359,7 +401,9 @@ wh sub create source-events \
 
 Authenticate WarmHub webhook deliveries by binding a credential set with `WEBHOOK_*` keys (for
 example, `WEBHOOK_SIGNING_SECRET` or `WEBHOOK_BEARER_TOKEN`) so your handler can verify the request
-came from WarmHub. Authenticate the external scheduler with the handler's own access controls:
+came from WarmHub. Verify the Standard Webhooks headers against the raw body when they are present;
+do not downgrade to native signature verification. Authenticate the external scheduler with the
+handler's own access controls:
 
 ```bash
 wh credential create ingest-webhook --repo <org>/<repo>
@@ -387,7 +431,7 @@ fields when this is the terminal stage; otherwise include them in the next-step 
 
 <pitfalls>
 
-- **`thing.head()` / `thing.query()` default to 50 items** — always set `limit` intentionally and follow `nextCursor` when the dataset can exceed one page
+- **Read pagination** — use the SDK iterator for scans or its bounded `*All` helper; do not hand-roll cursor loops
 - **Conflict retries should be surgical** — if entity adds collide with existing data, remove only the conflicting op and retry; do not discard the whole batch
 - **Handler auth is via `WH_TOKEN` PAT** — the deployed handler writes back to WarmHub with its own PAT; inbound deliveries are verified via a bound `WEBHOOK_*` credential set. There is no per-run stdin token
 - **Shape optional fields** — use `"field?": "type"` syntax, not a separate optional flag
@@ -403,6 +447,9 @@ fields when this is the terminal stage; otherwise include them in the next-step 
   proof that HEAD re-resolution works
 - **Add ops are not replay-safe by themselves** — deterministic names plus conflict/idempotency logic
   make replay safe, not the `add` verb
+- **Server dry-runs are non-reserving snapshots** — a clean dry-run does not create a receipt or
+  guarantee a later write; retain real-write receipts and stop for exact receipt recovery after an
+  ambiguous transport result
 - **Do not cargo-cult old Convex-era batch limits** — returned WarmHub supports larger commit workflows; use semantic commit planning or `wh-commit-design` instead of hard-coding `200 ops per commit`
 - **Do not cross-wire repo content files** — publish root `README.md` only as `--kind readme` and root
   `AGENTS.md` only as `--kind agents`; run both `get` commands and compare the readbacks before handoff

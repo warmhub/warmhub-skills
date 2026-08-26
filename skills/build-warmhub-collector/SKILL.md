@@ -46,7 +46,7 @@ collection is not represented in `ingestion.sources`, hand findings back to `pla
    - optional hybrid claim/upgrade behavior.
 4. Use [references/write-path.md](references/write-path.md) to choose direct SDK writes only when
    safe; otherwise route submissions through a deployed handler that owns WarmHub credentials,
-   validation, commits, and QC.
+   bounded server validation, commits, QC, and receipt recovery.
 5. Copy or adapt [templates/collect-pwa](templates/collect-pwa) for the first public starter unless
    the user already has an app surface.
 6. Map each form/media/GPS/scan field to approved things and assertions, including provenance keyed
@@ -83,6 +83,9 @@ Return:
 - WarmHub service credentials stay server-side; browser code never contains PATs or broad write
   tokens.
 - Offline queueing, retry behavior, and QC-at-ingress are explicit.
+- The handler retains the immutable source envelope and digest, exact WarmHub receipts, and any
+  stream/submission identity used by its write path.
+- Client-grouped JSONL is the bulk write path.
 - The answer ends with a next-step block.
 
 ## References

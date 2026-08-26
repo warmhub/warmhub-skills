@@ -22,29 +22,26 @@ Prefer semantic partitions and restartability over YOLO max-size commits.
 Capture:
 
 - op mix: `add` | `revise` | `assertion` | mixed
-- estimated op count
-- payload width / record size
+- immutable source location and content digest
 - natural partition keys already present in the data
 - target path:
   - local
   - proxied local / prod-like
   - prod
 
-If the dataset is not already materialized as JSONL, decide whether it should be exported once or streamed.
+If restartability matters, export the source once as JSONL and retain its digest. Use stdin only when
+the producer itself is the immutable, replayable source.
 
 ## 2. Decide Single Commit Vs Planned Multi-Commit
 
 Default rule:
 
 - if a real semantic unit already fits comfortably, keep it as one commit
-- if the semantic unit is too large, plan semantic sub-commits
+- if it is too large for one bounded request, emit replayable JSONL and let the CLI group it
 - use blind row slicing only as the final fallback
 
-Current practical guidance from observed runs:
-
-- `13k`, `32k`, `36k` op scenarios fit naturally as single semantic commits
-- `50k–100k` is the preferred planning band for larger add-heavy datasets when payloads allow
-- do not design around unlimited ingest; current default hard ingest ceiling is `1,000,000` ops unless explicitly overridden
+Do not choose source partitions from a generic operation-count target. Add a semantic boundary only
+when it improves QC, human review, or replay/restart clarity; transport grouping is the CLI's job.
 
 For multi-commit datasets, read [observed-scenarios.md](references/observed-scenarios.md).
 
@@ -59,34 +56,44 @@ Preferred order:
 3. split oversized groups by a finer domain key
 4. row-slice only if the finer semantic key is still too large
 
-Do not start with `chunkit N` unless the dataset has no useful partition keys.
+Do not start with blind row slicing (for example, a fixed `--chunk-size N` plan) unless the dataset
+has no useful partition keys.
 
 ## 4. Define The Execution Model
 
-If the run is multi-commit:
+For a large run:
 
-1. plan semantic chunks once
-2. split/export the source once
-3. write JSONL files under a scratch path, not tracked source trees
-4. commit repeatedly from those written files
-5. persist resumable state
+1. export one replayable JSONL per meaningful source partition under a scratch path
+2. submit it with `wh commit submit --repo <org>/<repo> --file <source>.jsonl --stream-id <stable-source-stream> --skip-existing -m "…"`; the CLI creates the transport groups
+3. use `--stream` with the same required `--stream-id` and `--skip-existing` only when an immutable producer is the source
+4. persist the source location and digest, JSONL digest, stream id, submission id, and every returned receipt
 
-For large JSONL automation, avoid `wh commit submit --json` if the wrapper would have to parse or buffer the full returned payload.
+Pass `--submission-id <uuid>` when the runbook owns recovery identity; otherwise record the UUID
+the CLI prints. `streamId` is correlation metadata, while the submission id plus chunk ordinal
+derives the receipt lookup identity.
+
+For an ambiguous append, stop the affected write and run `wh commit receipt <event-request-id> --repo <org/repo>`.
+A returned receipt is authoritative. Retry only after an opaque not-found response, and then resend
+the identical submission identity, stream id, message, and ordered operations. `--skip-existing`
+makes deliberate add-only reruns safe; it does not establish that an ambiguous append failed.
+
+Do not add checkpoints to normal retries. Only when reconciliation, reseeding, export, or
+outcome-unknown recovery evidence needs a portable repository archive, follow
+[repository-checkpoints.md](references/repository-checkpoints.md). It keeps the archive lifecycle,
+authority, integrity check, and separation from per-consumer incremental `repoSeq` and exact write
+receipts explicit.
 
 ## 5. Define The Validation Path
 
 Preferred sequence:
 
-1. local smoke on 1-3 representative slices
-2. proxied local / prod-like run on the same slices
-3. full proxied local run if the scenario is large
-4. only then replay against prod
+1. run `wh commit submit --dry-run` on one complete bounded representative input
+2. correct server-reported errors, then write one independently reviewable JSONL group
+3. inspect its exact receipt and only then continue the remaining groups
 
-For proxied local:
-
-- keep the same JSONL inputs
-- switch to the toxiproxy frontend path
-- preserve repo/profile/api-url details in a runbook
+Dry-run uses the real server evaluator, but it is bounded to 10,000 operations and 4 MiB encoded
+input. It neither reserves repository state nor creates a submission identity or receipt, so the
+real write still needs normal receipt-based recovery.
 
 ## Output Shape
 
@@ -97,7 +104,7 @@ When asked to design a commit plan, produce:
   - single semantic commit
   - or planned multi-commit
 - partition ladder
-- target chunk envelope
+- source/group identity and retained evidence
 - execution model
 - validation path
 - concrete commands or script entrypoints if they already exist
@@ -105,6 +112,8 @@ When asked to design a commit plan, produce:
 ## References
 
 - Use [observed-scenarios.md](references/observed-scenarios.md) for the currently proven envelopes and generalized example datasets.
+- Use [repository-checkpoints.md](references/repository-checkpoints.md) only for the optional
+  portable archive branch; it is not a commit-retry mechanism.
 
 ## Next steps
 

@@ -20,7 +20,12 @@ Use this contract for `ingestion` in `.warmhub-builder/project-state.json`.
       }
     ],
     "idempotency": "artifact hash, event id, upstream revision, reporting period, or composite key",
-    "backfill": "none | bounded range | full history with checkpointing",
+    "writes": {
+      "bulk": "client-grouped JSONL with deterministic names, recorded --submission-id, observability --stream-id, and --skip-existing; or bounded semantic submit",
+      "preflight": "wh commit submit --dry-run or client.commit.validate on one complete group (at most 10,000 operations and 4 MiB); non-reserving snapshot",
+      "recovery": "retain submission identity, group ordinal/eventRequestId, request digest, and exact receipt; stop later groups after ambiguous transport and recover with wh commit receipt/client.commit.getReceipt before any retry; only opaque receipt not-found permits the unchanged retry"
+    },
+    "backfill": "none | bounded range | full history with an approved resumability plan",
     "snapshotAbsencePolicy": "full-snapshot deactivate | active-only review | later-full field-flip | event-stream ignore",
     "deferredPrimitives": [
       {
@@ -63,7 +68,14 @@ Planning checklist:
   that produced each derived value.
 - Human collection has validation, provenance, moderation or QC, and retry behavior.
 - Webhook subscriptions and external schedulers state the handler authentication they need.
-- Backfill is bounded unless there is a resumable checkpoint plan.
+- Webhook handlers read and authenticate the raw body before parsing. When any Standard Webhooks
+  header is present, its complete valid signature is authoritative; use `webhook-id` for durable
+  delivery dedup, treat `repoSeq` as optional ordering metadata, and state retry/dead-letter/fallback
+  handling. Credential revocation stops delivery fail-closed; deletion or unbinding permits unsigned
+  delivery.
+- Bulk writes use client-grouped JSONL. Each bounded server preflight is non-reserving; receipt
+  recovery, not current state or a later noop, resolves an ambiguous transport outcome.
+- Backfill is bounded unless there is an approved resumability plan.
 - QC covers completeness, ranges, totals, source freshness, and provenance where relevant.
 - Provenance captures source identity, actor or collector identity, raw/derived mapping policy, and
   validation receipt where applicable.

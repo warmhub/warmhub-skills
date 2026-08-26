@@ -47,13 +47,19 @@ When the source is an existing WarmHub repo and facts are stale or missing, comp
    migration trigger, and re-derivable fields. Keep collection-app submissions as first-class source
    records with provenance, validation, and moderation or QC gates.
 6. Define idempotency: source artifact hash, upstream revision id, event id, reporting-period key, or
-   composite key.
+   composite key. For bulk adds, specify client-grouped JSONL, deterministic names, a recorded
+   submission identity, `--skip-existing`, exact receipts, and stop-on-ambiguous-transport recovery.
+   Do not generate checkpoints for ordinary ingest or retry. For an explicit reconciliation, reseed,
+   export, or outcome-unknown recovery-evidence branch, use
+   [repository-checkpoints.md](../wh-commit-design/references/repository-checkpoints.md): retain
+   receipts first, then generate, poll, download, and verify a later archive only when needed.
 7. Define backfill and steady-state cadence, including external scheduling or a webhook subscription,
    and the snapshot absence policy: full-snapshot deactivate/status, active-only review, later-full field-flip,
    or immutable event-stream ignore.
 8. Define provenance and QC assertions, including raw source values, derived semantic values,
    mapping policy/version when mappings can drift, and when the pipeline fails closed, warns, or
-   skips.
+   skips. Name one bounded server preflight (`wh commit submit --dry-run` or `client.commit.validate`)
+   before a real group; it validates a snapshot and reserves neither state nor a receipt.
 9. For every cross-source or cross-repo join, prove a license-clean crosswalk/resolver exists and that
    the join key is time-durable for historical rows. If not, mark the relevant query `[M]` blocked on
    missing data rather than promising an edge.
@@ -77,6 +83,7 @@ Return:
 - cardinality-preserving assertion writes
 - deferred primitive/id-hint retreats and migration triggers, or `none`
 - idempotency key and dedup strategy
+- grouped-write, preflight, receipt, and ambiguous-transport recovery policy
 - backfill boundary and steady-state cadence
 - snapshot absence policy
 - cross-source join feasibility result
@@ -96,6 +103,12 @@ Return:
   live relationship verification passes.
 - Human/mobile collection is treated as production ingestion, not app-only state.
 - Idempotency, provenance, backfill, and QC are explicit.
+- Bulk plans use client-grouped JSONL with stable identity and `--skip-existing`. Preflight is
+  bounded and non-reserving, and recovery names the exact receipt lookup plus the stop condition for
+  ambiguous transport.
+- Checkpoints are absent from ordinary ingest and retry paths. Any explicit reconciliation/reseed/
+  export or recovery-evidence branch records checkpoint-specific authority, lifecycle, downloaded
+  artifact integrity, and the fact that the archive cannot establish a write offset.
 - Field forms new to the project are named for build-stage live verification before adoption;
   local-green is not live-green.
 - Existing repo plans use `discover-warmhub-repo` facts or state the fallback facts gathered.
@@ -105,6 +118,8 @@ Return:
 
 - [references/ingestion-plan.md](references/ingestion-plan.md) — required plan fields and source
   classification checklist.
+- [repository-checkpoints.md](../wh-commit-design/references/repository-checkpoints.md) — optional
+  portable archive, access, verification, and recovery-evidence branch.
 
 ## Next steps
 

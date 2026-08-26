@@ -125,6 +125,45 @@ Preferred order:
 
 For large ingest design, use `wh-commit-design` instead of hard-coding a legacy small-batch limit.
 
+### JSONL Is The Bulk Default
+
+For a bulk import, write deterministic operations to JSONL and let the CLI group them on the
+client. Give the logical submission stable identities and make add-only replay explicit:
+
+```bash
+wh commit submit --repo <org>/<repo> --file operations.jsonl \
+  --stream-id import-2026-05 --submission-id <stable-uuid> --skip-existing \
+  -m "Import May 2026"
+```
+
+Keep the `submissionId`, `streamId`, each client group/ordinal, its derived `eventRequestId`,
+request digest, and returned receipt with the source artifact. `--skip-existing` makes a named
+`add` a `noop` on an independently repeated import; it does not replace receipt recovery.
+
+Do not make direct `client.stream.append()` calls the ordinary ingestion baseline. It is an
+advanced, caller-orchestrated surface. Use it only when the approved plan needs that control and
+can retain the same identity and body for an exact retry.
+
+### Bounded Server Preflight And Recovery
+
+Before a real group, use the server evaluator against that complete bounded group:
+
+```bash
+wh commit submit --repo <org>/<repo> --file group.json --dry-run \
+  --skip-existing -m "Import May 2026"
+```
+
+Or call `client.commit.validate(org, repo, operations, { message, skipExisting: true })`.
+Both are snapshot preflights, limited to 10,000 operations and 4 MiB. They validate with server
+truth but do not reserve repository state, create a receipt, or authorize the later write; inspect
+every operation result and re-handle any real-write failure.
+
+On a timeout, reset, or malformed response after dispatch, the result is ambiguous. Stop later
+groups, retain the recorded `eventRequestId`, and recover that exact receipt with
+`wh commit receipt <event-request-id>` (or `client.commit.getReceipt`). Retry only the unchanged
+group under its original submission identity when receipt recovery returns an opaque not-found.
+Never infer success from current graph state, a later conflict/noop, or the stream id.
+
 ### Optional Conflict-Isolating Two-Phase Pattern
 
 If durable entity adds often collide with existing data, stage them separately from downstream
@@ -173,20 +212,11 @@ import { type WarmHubClient, isWarmHubError } from '@warmhub/sdk-ts'
 
 async function getExistingEntities(client: WarmHubClient): Promise<Set<string>> {
   const slugs = new Set<string>()
-  let cursor: string | undefined
 
   try {
-    do {
-      const page = await client.thing.head(org, repo, {
-        shape: 'MyEntity',
-        limit: 500,
-        cursor,
-      })
-      for (const item of page.items) {
-        slugs.add(item.name.replace(/^MyEntity\//, ''))
-      }
-      cursor = page.nextCursor
-    } while (cursor)
+    for await (const item of client.thing.headIter(org, repo, { shape: 'MyEntity', limit: 500 })) {
+      slugs.add(item.name)
+    }
   } catch (err) {
     if (!isWarmHubError(err) || err.kind !== 'NOT_FOUND') throw err
   }
@@ -194,6 +224,10 @@ async function getExistingEntities(client: WarmHubClient): Promise<Set<string>> 
   return slugs
 }
 ```
+
+For Python, use `repo.things.head_iter(shape="MyEntity")` for a scan, or
+`repo.things.head_all(shape="MyEntity", max_items=10_000)` when materializing a bounded result is
+appropriate.
 
 ### Check Existing Ingest Records
 

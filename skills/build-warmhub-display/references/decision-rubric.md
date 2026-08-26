@@ -18,6 +18,17 @@ source attribution. This rubric only chooses the display surface.
 | Ops tolerance | None | Low static hosting/build | Low | Managed services accepted |
 | Persistence | Notebook state/dataframes | Static snapshots/client state | None first; KV/D1 later by threshold | Supabase tables expected |
 
+## Read Choice
+
+- Use the TypeScript SDK for TypeScript surfaces; Python SDK is equally suitable for notebooks,
+  report jobs, and Python services.
+- A tokenless public read is limited to 25 rows per page and two pages, so score it only for small
+  public displays or probes. Complete data requires authenticated reads.
+- A static snapshot or one-shot route is the default. Score an incremental projection only when the
+  display must keep a durable derived model current over time.
+- If the same restricted subset is read repeatedly, a stored View plus a View-backed grant can make
+  that contract least-privilege and repeatable; it is optional for simpler displays.
+
 ## Scoring Heuristics
 
 - Notebook wins when the user needs analysis before sharing, wants charts/tables, or has no deployment tolerance.

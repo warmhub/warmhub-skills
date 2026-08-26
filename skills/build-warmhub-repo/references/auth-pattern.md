@@ -2,8 +2,9 @@
 
 A WarmHub ingestion repo deals with auth in two directions:
 
-1. **Outbound (your code → WarmHub):** writing things/assertions. This always uses a `WH_TOKEN` PAT —
-   in local dev, CI, and the deployed webhook handler alike.
+1. **Outbound (your code → WarmHub):** a normal external ingestion repo uses a `WH_TOKEN` PAT in
+   local dev, CI, and its deployed webhook handler. A registered component may instead receive a
+   scoped runtime token declared through `runtimeAccess`; follow `add-warmhub-component` for that path.
 2. **Inbound (WarmHub → your handler):** when a webhook subscription delivers an event to
    your handler's HTTPS endpoint. This is verified with a bound credential set, not a PAT.
 
@@ -19,7 +20,6 @@ not the supported auth path for SDK clients.
 
 ```bash
 wh auth login
-wh token create --name my-data-ingest --scope repo:write
 wh token create --name my-data-ingest --scope <org>/<repo>=repo:write --expires 90d
 ```
 
@@ -52,6 +52,15 @@ function createClient(): WarmHubClient {
 }
 ```
 
+Python uses the same `WH_TOKEN` convention through the SDK's explicit environment constructor:
+
+```python
+from warmhub import WarmHubClient
+
+with WarmHubClient.from_env() as client:
+    repo = client.repository("<org>/<repo>")
+```
+
 ## Webhook Delivery Payload
 
 When a subscription fires, WarmHub sends an HTTP POST to your handler's `webhookUrl`. The JSON body
@@ -59,35 +68,100 @@ includes:
 
 | Field | Description |
 |-------|-------------|
-| `event` | `"warmhub.write"` or `"warmhub.retract"` |
+| `event` | `"warmhub.write"`, `"warmhub.retract"`, a metadata event, or `"warmhub.cron"` on a legacy cron delivery |
 | `traceId` | Trace identifier for the event chain |
 | `runId` | Action run identifier |
-| `subscriptionId` | Subscription identifier |
-| `repo` | `{ "orgName", "repoName" }` — the subscription's home repo |
-| `callback_url` | Endpoint to report async progress / terminal outcome (post with normal `repo:write` auth) |
-| `matchedOperations` | Operations matched by the subscription filter |
+| `subscriptionName` | Subscription name |
+| `repo` | `{ "orgName", "repoName" }` for a repo subscription, or `null` for an org event |
+| `callback_url` | Endpoint to report async progress / terminal outcome (prefer `repo:action-callback`; `repo:write` also permits it) |
+| `matchedOperations` | Operations matched by the subscription filter, or an empty array for a legacy cron delivery |
 
-Delivery headers include `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
+Delivery headers include `X-WarmHub-Idempotency-Key` (stable across attempts), `X-WarmHub-Run-Id`,
+and `X-WarmHub-Attempt`. Standard Webhooks deliveries also carry `webhook-id` (the same stable
+delivery identity), `webhook-timestamp`, and `webhook-signature`. `repoSeq` is present in the body
+only for commit-backed events; it is intentionally absent for legacy cron and metadata events.
 
-### Reading The Delivery In A Handler
+### Authenticate The Raw Body Before Parsing
 
-The handler parses the POST body and dispatches the matching command. There is no stdin token to
-read, and the SDK does not read environment variables by itself; the client gets its token through
-the `auth.getToken` provider above, which reads `WH_TOKEN`.
+Read the exact request body once, authenticate it, then parse JSON and dispatch. There is no stdin
+token to read, and the TypeScript SDK does not read environment variables by itself; the client gets its token
+through the `auth.getToken` provider above, which reads `WH_TOKEN`.
 
 ```typescript
-import { getValidToken } from './auth.js'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
-// Parse the webhook delivery body and decide what to run.
-async function readDeliveryInput(rawBody: string): Promise<{ event: string; repo?: unknown }> {
+function safeEqual(got: string, expected: string) {
+  const left = Buffer.from(got)
+  const right = Buffer.from(expected)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+function standardKey(secret: string) {
+  if (!secret.startsWith('whsec_')) return Buffer.from(secret)
   try {
-    const input = JSON.parse(rawBody)
-    return { event: input.event, repo: input.repo }
+    return Buffer.from(atob(secret.slice('whsec_'.length)), 'binary')
   } catch {
-    return { event: 'unknown' }
+    return Buffer.from(secret)
+  }
+}
+
+function verifyStandardWarmHubSignature(
+  rawBody: string, signature: string, timestamp: string, webhookId: string, secret: string,
+) {
+  const expected = `v1,${createHmac('sha256', standardKey(secret))
+    .update(`${webhookId}.${timestamp}.${rawBody}`).digest('base64')}`
+  let matched = false
+  for (const candidate of signature.split(' ')) {
+    if (candidate.startsWith('v1,')) matched = safeEqual(candidate, expected) || matched
+  }
+  return matched
+}
+
+function verifyNativeWarmHubSignature(rawBody: string, headers: Headers, secret: string) {
+  const signature = headers.get('X-WarmHub-Signature')
+  const timestamp = headers.get('X-WarmHub-Timestamp')
+  if (!signature || !timestamp || !Number.isSafeInteger(Number(timestamp))) return false
+  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false
+  const expected = `sha256=${createHmac('sha256', secret)
+    .update(`${timestamp}.${rawBody}`).digest('hex')}`
+  return safeEqual(signature, expected)
+}
+
+async function readDelivery(request: Request, secret: string) {
+  const rawBody = await request.text()
+  const standard = ['webhook-id', 'webhook-timestamp', 'webhook-signature']
+    .map((name) => request.headers.get(name))
+  if (standard.some(Boolean)) {
+    const [webhookId, timestamp, signature] = standard
+    if (!webhookId || !timestamp || !signature || !Number.isSafeInteger(Number(timestamp))) {
+      throw new Error('invalid Standard Webhooks headers')
+    }
+    const verified = verifyStandardWarmHubSignature(
+      rawBody, signature, timestamp, webhookId, secret,
+    )
+    if (!verified || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) {
+      throw new Error('invalid Standard Webhooks delivery')
+    }
+    return { deliveryId: webhookId, input: JSON.parse(rawBody) }
+  }
+
+  // Only when no Standard Webhooks header exists may a receiver verify the
+  // configured native X-WarmHub-Signature/X-WarmHub-Timestamp pair here.
+  if (!verifyNativeWarmHubSignature(rawBody, request.headers, secret)) {
+    throw new Error('invalid WarmHub delivery')
+  }
+  return {
+    deliveryId: request.headers.get('X-WarmHub-Idempotency-Key'),
+    input: JSON.parse(rawBody),
   }
 }
 ```
+
+Standard Webhooks headers are authoritative when present: a partial or failed Standard verification
+is a rejection, never a fallback to the native signature. Deduplicate durably on `webhook-id` (or,
+for native-only delivery, `X-WarmHub-Idempotency-Key`) before starting work; return a successful
+acknowledgement for a completed duplicate. Treat `repoSeq` as optional ordering metadata, never as
+the delivery identity.
 
 ## Verifying Inbound Deliveries
 
@@ -109,11 +183,26 @@ Supported keys include:
 | `WEBHOOK_BASIC_USERNAME` + `WEBHOOK_BASIC_PASSWORD` | `Authorization: Basic <base64>` |
 | `WEBHOOK_SIGNING_SECRET` | `X-WarmHub-Signature` (HMAC-SHA256) + `X-WarmHub-Timestamp` |
 
+The signing secret also produces Standard Webhooks headers. If a binding is revoked, WarmHub stops
+delivery fail-closed; deleting the credential set or unbinding it instead leaves future deliveries
+unsigned and unauthenticated. Revoke to stop delivery, delete or unbind only when that unauthenticated
+behavior is intended.
+
+## Retries, Dead Letters, And Fallback
+
+WarmHub can retry a failed delivery up to five times; `429`, `5xx`, network, and transient
+credential-resolution failures are retryable, while other `4xx` responses are terminal. Make handler
+work idempotent by delivery identity, return `2xx` only after the synchronous work is complete, and
+use the callback URL only when the handler explicitly accepts asynchronous processing. Exhausted
+retries end in `dead_letter`; a configured fallback URL receives a failure notification, not a replay
+of the original delivery. Monitor the subscription delivery feed/dead letters instead of silently
+retrying an already accepted delivery yourself.
+
 ## Auth Summary
 
 | Direction | Mechanism | Setup |
 |-----------|-----------|-------|
-| Local dev → WarmHub | `WH_TOKEN` PAT | `wh token create --name <name> --scope repo:write` |
+| Local dev → WarmHub | `WH_TOKEN` PAT | `wh token create --name <name> --scope <org>/<repo>=repo:write --expires 90d` |
 | CI → WarmHub | `WH_TOKEN` PAT | store as CI secret |
 | Webhook handler → WarmHub | `WH_TOKEN` PAT | set in the handler's deploy env |
 | WarmHub → webhook handler | bound `WEBHOOK_*` credential set | `wh credential set …` + `wh sub bind …` |

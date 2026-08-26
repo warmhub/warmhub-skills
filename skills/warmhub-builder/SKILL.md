@@ -6,7 +6,8 @@ description: >
   guide a repo through ingestion, collection, display, or component stages, install a required
   component such as Veritas, or choose the next WarmHub builder skill. Trigger phrases: "build
   something with WarmHub", "start a WarmHub project", "guide me through building a WarmHub repo",
-  "WarmHub repo and app", "with Veritas", "what WarmHub builder stage is next".
+  "WarmHub repo and app", "with Veritas", "what WarmHub builder
+  stage is next".
 ---
 
 # WarmHub Builder
@@ -36,8 +37,11 @@ skill for that work when it is installed.
 - Initialize or update the manifest before handing off.
 - Re-enter live WarmHub repo state through `discover-warmhub-repo` when the path starts from an
   existing repo.
-- Use `connect-warmhub-app` only when an app surface needs SDK, auth, one-fact probe, or attribution
-  setup.
+- Use `connect-warmhub-app` when an app surface needs SDK, auth, one-fact probe, or attribution
+  setup, or when an MCP-capable agent needs WarmHub access.
+- For agent-native integration, compose `connect-warmhub-app` directly when the user only needs a
+  global MCP connection; repo-specific work can connect after repo facts are available. MCP is a
+  connection choice, not a project shape or a new builder stage.
 - Keep private paths, tokens, local secrets, and dev-only commands out of generated project guidance.
 - Do not mark a stage complete unless its stage-owned artifact exists and has a verification
   receipt. A local scaffold is not a completed WarmHub repo; a display over local export files is not
@@ -73,6 +77,7 @@ Ask only what is needed to choose the shape:
 - Does the project collect new data from users, devices, forms, photos, scans, GPS, or offline field
   work?
 - Does the project need a display, dashboard, notebook, API, or other read surface?
+- Does an MCP-capable agent need direct WarmHub access?
 - What is the first useful output: data-only, collect-only, display-only, or collect-and-display?
 - Is the repo identity or data sensitivity public-safe, internal, private, or unknown?
 
@@ -86,7 +91,7 @@ Ask only what is needed to choose the shape:
 | `build-warmhub-repo` | ingestion plan for a new repo | scaffolded repo and verified ingest/QC path |
 | `add-warmhub-component` | existing repo or built repo | component plan/package/health result |
 | `discover-warmhub-repo` | existing `org/repo` | read-only repo fact summary |
-| `connect-warmhub-app` | repo facts and app target | SDK/auth/probe/attribution substrate |
+| `connect-warmhub-app` | repo facts and app or MCP target | SDK/auth/probe/attribution substrate |
 | `build-warmhub-collector` | manifest, repo facts, collection intent | mobile/write collection surface |
 | `build-warmhub-display` | manifest, repo facts, display intent | read/display or analysis surface |
 

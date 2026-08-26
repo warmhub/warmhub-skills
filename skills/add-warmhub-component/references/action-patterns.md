@@ -1,40 +1,22 @@
-# Action Patterns
+# Handler Patterns
 
-A component reacts to events by declaring **subscriptions**. Each subscription has:
-- a `trigger` — `{ "kind": "event", "shape": "...", "filter"?: {...} }`
-- a `webhookUrl` — a public HTTPS endpoint **you operate** that receives the delivery POST and does
-  the work
-- optional `credentials` — a bound credential set for inbound delivery auth (and any handler secrets)
+A component subscription POSTs to a public HTTPS handler that its operator deploys. WarmHub does
+not execute component code, host a container, invoke a repo script, or schedule cron work. Keep
+handler source in the component repo only as deployable source; an external scheduler must call the
+handler directly.
 
-> WarmHub does not run component code in a managed container, and the manifest has no
-> `actions` array. The handler is a service you deploy; the subscription just points at its URL.
+## Choose the smallest pattern
 
-Choose the simplest pattern that fits.
+| Need | Manifest/runtime choice |
+|---|---|
+| Shapes, config, or starter data only | Seed-only: no subscriptions or handler. |
+| React to writes | One event subscription to an external HTTPS handler. |
+| Authenticate inbound delivery | Bind one credential set with a delivery auth key. |
+| Scheduled work | External scheduler calls the handler; do not add a cron subscription. |
 
-## 1. Seed-Only Component
+Keep trigger and output shapes separate unless a loop is explicitly intended.
 
-If the component only creates shapes, starter data, or config, skip subscriptions entirely.
-
-```json
-{
-  "subscriptions": [],
-  "seeds": [
-    {
-      "kind": "thing",
-      "shape": "ComponentConfig",
-      "name": "incident-digest",
-      "data": { "enabled": true, "maxItems": 20 }
-    }
-  ]
-}
-```
-
-Use this for configuration packages, schema bundles, and bootstrapping components.
-
-## 2. Event-Driven Webhook
-
-Use when the component should react to writes on a shape. The subscription fires on matching
-operations and POSTs the event to your handler.
+## Event subscription
 
 ```json
 {
@@ -48,102 +30,49 @@ operations and POSTs the event to your handler.
 }
 ```
 
-Notes:
-- the handler reads the delivery body, processes the matched operations, and writes results back
-  using its own `WH_TOKEN` PAT
-- omit `credentials` when the endpoint does not need to verify the caller and the handler needs no
-  extra secrets
+The trigger compiles to a webhook subscription. `kind: "webhook"` is optional advisory metadata;
+the effective kind comes from `trigger.kind`. `fallbackWebhookUrl` is optional and is an alert target
+after final primary failure, not a second primary processor.
 
-## 3. Externally Scheduled Handler
+## Delivery contract
 
-Use an external scheduler you operate for scheduled syncs, cleanup, summarization, or recurring
-checks. It calls the deployed handler directly; there is no cron subscription in the manifest or
-WarmHub CLI. Authenticate that request with the handler's own access controls.
+Read raw request bytes before parsing JSON. When a delivery credential is bound, authenticate those
+bytes first; otherwise follow the explicit unsigned-delivery decision. For commit deliveries,
+expect:
 
-## 4. Secret-Backed Webhook
+| Field | Meaning |
+|---|---|
+| `event` | `warmhub.write` or `warmhub.retract` |
+| `runId`, `traceId`, `subscriptionName` | Delivery/run correlation |
+| `callback_url` | Report asynchronous `processing`, `success`, `failure`, or `retry_requested` |
+| `repo` | The subscription's home repo |
+| `originRepoName` | Present for a cross-repo source |
+| `matchedOperationIndexes`, `matchedOperations` | Matching operation context |
+| `repoSeq` | Optional non-negative commit sequence; absent for cron and metadata events. For a cross-repo subscription it belongs to the source repo, not `repo`. |
 
-Use when inbound deliveries must be authenticated, or the handler needs runtime secrets. Declare a
-credential set and bind it to the subscription. The platform attaches auth headers to each delivery;
-the handler reads any other secrets from its deploy environment.
+Metadata events use `event: "warmhub.<eventType>"` and `data`, not matched operations. Do not make
+`repoSeq` required or substitute a fake zero.
 
-```json
-{
-  "credentials": [
-    {
-      "name": "digest-runtime",
-      "requiredKeys": [
-        { "key": "WEBHOOK_SIGNING_SECRET" }
-      ]
-    }
-  ],
-  "subscriptions": [
-    {
-      "name": "incident/process-event",
-      "trigger": { "kind": "event", "shape": "IncidentEvent" },
-      "webhookUrl": "https://handler.example.com/incident/process",
-      "credentials": ["digest-runtime"]
-    }
-  ]
-}
-```
+The platform supplies `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
+Deduplicate irreversible work with the idempotency key or `runId`; retries may invoke the handler
+more than once.
 
-A `WEBHOOK_SIGNING_SECRET` makes WarmHub sign each delivery (`X-WarmHub-Signature` HMAC-SHA256 +
-`X-WarmHub-Timestamp`) so the handler can confirm the request is genuine. Use `WEBHOOK_BEARER_TOKEN`
-or `WEBHOOK_API_KEY` instead if your endpoint prefers a static auth header.
+## Outcomes and failure handling
 
-## Webhook Delivery Body
+Return a successful response for synchronous work. For accepted asynchronous work, use
+`callback_url`; a `failure` callback or callback timeout is terminal and lands in `dead_letter`.
+Authenticate a repo callback with `repo:action-callback`, not `repo:write`; the latter is only a
+transitional compatibility fallback. An org metadata callback instead needs `org:action-callback`.
+A component runtime token with declared writes also passes the callback gate; a separate PAT is not
+required.
 
-WarmHub POSTs JSON to `webhookUrl`:
+WarmHub makes at most five attempts for retryable failures (`HTTP_429`, `HTTP_5xx`, network, and
+transient credential-resolution errors), with exponential backoff. Non-retryable failures go to
+`failed_terminal`; exhausted retries and callback failures go to `dead_letter`. A configured fallback
+receives a failure notification only after the primary result is terminal; it does not rerun the
+original webhook. Retry-exhausted deliveries notify at terminal completion, before any fallback
+notification; error-code-classified failures with a configured fallback defer notification until the
+fallback settles. Suppressed authority-revoked deliveries do not retry, fallback, or notify.
 
-| Field | Description |
-|-------|-------------|
-| `event` | `"warmhub.write"` or `"warmhub.retract"` |
-| `traceId`, `runId`, `subscriptionId` | Identifiers for the run and chain |
-| `repo` | `{ "orgName", "repoName" }` — the subscription's home repo |
-| `callback_url` | Endpoint to report async progress / terminal outcome |
-| `matchedOperations` | The operations matched by the subscription filter |
-
-Headers include `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
-
-## Handling A Delivery
-
-The handler parses the POST body and does the work. It authenticates back to WarmHub with its own
-`WH_TOKEN` PAT — there is no token injected on stdin.
-
-### Bash
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-body="$(cat)"                                   # the webhook delivery body
-repo="$(jq -r '.repo.orgName + "/" + .repo.repoName' <<<"$body")"
-# WH_TOKEN comes from the handler's environment
-wh shape head IncidentEvent --repo "$repo"
-```
-
-### TypeScript
-
-```ts
-import { WarmHubClient } from '@warmhub/sdk-ts'
-
-const body = JSON.parse(await Bun.stdin.text()) as Record<string, unknown>
-const repo = body.repo as { orgName: string; repoName: string }
-const client = new WarmHubClient({
-  auth: {
-    getToken: async () => {
-      const token = process.env.WH_TOKEN
-      if (!token) throw new Error('WH_TOKEN is required')
-      return token
-    },
-  },
-})
-```
-
-## Pattern Selection Rules
-
-- start with seed-only if no runtime work is needed
-- use an event webhook when the component reacts to writes on a shape
-- use an external scheduler to invoke the handler when time-based automation is genuinely needed
-- add a bound credential set when deliveries must be authenticated or the handler needs secrets
-- avoid mixing many subscriptions unless the component clearly benefits from several triggers
+Use `wh sub log <name>`, `wh sub attempts <runId>`, and `wh notifications --repo <org>/<repo>` to
+inspect those outcomes.

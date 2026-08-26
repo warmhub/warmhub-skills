@@ -6,6 +6,8 @@ Before writing analysis cells, use `connect-warmhub-app` or its minimal fallback
 WarmHub read, decide local-only token handling, and choose source attribution for rendered reports.
 This branch is for local analysis and exported reports, not deployed apps.
 
+Use the Python SDK and the contract already selected in [read-patterns.md](read-patterns.md).
+
 ## Best Fit
 
 - One analyst or small research group.

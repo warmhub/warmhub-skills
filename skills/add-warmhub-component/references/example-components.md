@@ -13,7 +13,6 @@ Manifest profile:
 - `shapes`: yes
 - `seeds`: yes
 - `subscriptions`: no
-- `health.requires`: shapes and config things only
 
 Choose this when the component is mostly packaging and install-time setup.
 
@@ -52,7 +51,7 @@ Best fit:
 
 Manifest profile:
 - event subscriptions when needed; an external scheduler calls the deployed handler directly
-- explicit `health.requires`
+- doctor-checkable declared resources (subscriptions, credentials, shapes, seeds)
 - explicit `teardown.subscriptions`
 
 Choose this only after simpler seed-only or single-event patterns stop being enough.

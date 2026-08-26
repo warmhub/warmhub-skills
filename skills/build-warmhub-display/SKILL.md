@@ -17,7 +17,7 @@ analysis concerns only: surface selection, display-specific files, validation, d
 and manifest handoff.
 
 Do not design repo shapes, plan ingestion, build collectors, install components, or duplicate shared
-repo discovery, SDK, auth, token-safety, or attribution guidance.
+repo discovery, auth, token-safety, or attribution guidance.
 
 ## Inputs
 
@@ -48,18 +48,21 @@ presenting its outputs as authoritative.
    interaction depth, refresh cadence, and persistence needs.
 3. Use [references/decision-rubric.md](references/decision-rubric.md) to score Notebook,
    Observable, Cloudflare Workers, and Vercel plus Supabase.
-4. Load only the winning branch reference, or the top two when scores are close:
+4. Choose the smallest read contract with [references/read-patterns.md](references/read-patterns.md):
+   static/one-shot is the default; authenticated pagination is for complete datasets; incremental
+   projection is opt-in only for a long-lived derived read model.
+5. Load only the winning branch reference, or the top two when scores are close:
    - [references/observable.md](references/observable.md)
    - [references/cloudflare-workers.md](references/cloudflare-workers.md)
    - [references/vercel-supabase.md](references/vercel-supabase.md)
    - [references/ipython-notebook.md](references/ipython-notebook.md)
-5. Scaffold or plan the selected display surface using the branch reference and the app substrate
+6. Scaffold or plan the selected display surface using the branch reference and the app substrate
    from `connect-warmhub-app`.
-6. Prove the surface reads real WarmHub data, renders something concrete, and keeps secrets out of
+7. Prove the surface reads real WarmHub data, renders something concrete, and keeps secrets out of
    browser bundles, static output, notebooks, committed files, and page chrome.
-7. Update the manifest `display` block with selected surface, local path, demo URL when known,
+8. Update the manifest `display` block with selected surface, local path, demo URL when known,
    validation status, and blockers.
-8. End with the standard next-step block.
+9. End with the standard next-step block.
 
 Use the runtime's user-input tool for path-changing display decisions. Put the recommended choice
 first, offer 2-4 concrete choices with tradeoffs, and ask one question at a time. If no tool is
@@ -71,6 +74,8 @@ Return:
 
 - recommended display surface and score table
 - rationale tied to repo facts, sensitivity, audience, and user constraints
+- SDK/runtime choice and read contract, including whether a complete authenticated scan, stored View,
+  or incremental projection is actually needed
 - files scaffolded or exact implementation plan
 - WarmHub app connection and attribution status
 - validation commands run and results, including render/probe evidence
@@ -83,6 +88,10 @@ Return:
 - The stage composes `discover-warmhub-repo` and `connect-warmhub-app`, or records a minimal
   fallback with the facts gathered.
 - The display reads real WarmHub data before decorative UI work continues.
+- Anonymous public reads stay within the documented API cap; complete datasets use authenticated reads
+  and ordinary SDK iterator/all helpers.
+- Incremental change scans are used only for a long-lived projection, and the terminal consumer
+  `repoSeq` is saved only after a successful exhausted scan.
 - Component-backed claims are read from component-owned outputs, not local lookalike fields, unless
   the UI explicitly labels them as pending/local estimates.
 - Human-facing outputs include WarmHub source attribution unless the repo identity is intentionally
@@ -94,6 +103,8 @@ Return:
 ## References
 
 - [decision-rubric.md](references/decision-rubric.md) — surface scoring and tie-breakers.
+- [read-patterns.md](references/read-patterns.md) — SDK choice, pagination, grants, and optional
+  incremental projection rules.
 - [observable.md](references/observable.md) — Observable Framework or notebook-style display branch.
 - [cloudflare-workers.md](references/cloudflare-workers.md) — lightweight edge display/API branch.
 - [vercel-supabase.md](references/vercel-supabase.md) — durable authenticated app branch.

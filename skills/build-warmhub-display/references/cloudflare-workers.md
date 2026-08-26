@@ -58,10 +58,13 @@ Make `workers_dev` and `preview_urls` explicit in `wrangler.jsonc` so the public
 Start with the one-fact probe from `connect-warmhub-app`, then expand it into display routes. Use
 direct WarmHub HTTP fetch or a runtime-verified SDK call. The Worker should:
 
-1. Read `env.WARMHUB_API_URL`, `env.WARMHUB_REPO`, and `env.WH_TOKEN`.
-2. Add bearer auth server-side only.
+1. Read `env.WARMHUB_API_URL` and `env.WARMHUB_REPO`; read `env.WH_TOKEN` for authenticated mode.
+2. Add bearer auth server-side only when a token is configured.
 3. Return JSON with clear errors for missing env, auth failure, or upstream failure.
 4. Cache only public-safe responses.
+
+Follow the read contract already selected in [read-patterns.md](read-patterns.md); do not add durable
+projection state to a one-shot route.
 
 ## When To Add Cloudflare Storage Later
 

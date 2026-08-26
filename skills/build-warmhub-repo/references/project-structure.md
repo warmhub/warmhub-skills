@@ -1,6 +1,6 @@
 # Project Structure
 
-Standard file layout for a WarmHub data ingestion repo:
+## TypeScript/Bun Layout
 
 ```
 my-data-repo/
@@ -79,5 +79,10 @@ export const ORG = '<org>'
 export const REPO = '<repo>'
 // Optional commit attribution. Create this Thing first before passing it as opts.committer.
 export const COMMITTER_WREF = 'Agent/data-ingest'
-export const COMMIT_BATCH_SIZE = 200
 ```
+
+## Python Layout
+
+Keep the same responsibilities in a standard Python project: `pyproject.toml`, `src/repo_ingest/` for
+the CLI, auth, shapes, operations, dedup, QC, and source code, plus `tests/`. Install the SDK with
+`python -m pip install warmhub`; use `WarmHubClient.from_env()` for `WH_TOKEN`.

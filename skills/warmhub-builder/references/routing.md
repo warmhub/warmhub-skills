@@ -30,6 +30,16 @@ choose the smallest shape that produces a real artifact without blocking later b
 If the first stage is not installed, stop with a copy-pasteable prompt for that stage. Do not perform
 the stage inline.
 
+## Implementation Language
+
+Language does not add a builder stage or change this route. Use TypeScript/Bun by default when the
+project is TypeScript; use the Python SDK for notebooks, Python services, and existing Python
+pipelines. Keep the project's native runtime rather than adding a wrapper solely for WarmHub.
+
+Agent-native MCP access also does not add a shape or stage. Route an agent-only global connection
+directly to `connect-warmhub-app`; for repo-specific work, compose it after discovery or repo
+creation. It is not a display, collector, component, or repository implementation path.
+
 ## Main Chain
 
 For new repos:

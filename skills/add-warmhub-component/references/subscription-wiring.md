@@ -1,11 +1,11 @@
 # Subscription Wiring
 
-Subscriptions connect a manifest trigger to a `webhookUrl` you operate. There is no manifest
-`actions` array — the subscription delivers directly to the handler endpoint.
+A component manifest declares webhook subscriptions. Each target is a public HTTPS endpoint operated
+by the component author. The installer validates the primary and optional fallback URL at create and
+delivery time: HTTPS, allowed public port, canonical public host, and no URL credentials. Do not use
+localhost, private addresses, a managed action runtime, or a manifest cron subscription.
 
-## Event Subscription
-
-Use for reactive components that process new or changed things/assertions.
+## Event subscriptions
 
 ```json
 {
@@ -17,76 +17,41 @@ Use for reactive components that process new or changed things/assertions.
         "shape": "IncidentEvent",
         "filter": { "shape": "IncidentEvent" }
       },
-      "webhookUrl": "https://handler.example.com/incident/process"
-    }
-  ]
-}
-```
-
-Notes:
-- `trigger.shape` is required for event triggers
-- `filter` is optional; if omitted, the installer/runtime defaults to the shape filter
-- `webhookUrl` must be a public HTTPS endpoint (no localhost / private IPs)
-- keep names stable and scoped, e.g. `incident/process-event`
-
-## Scheduled Work
-
-For scheduled syncs or maintenance, configure an external scheduler you operate to call the
-deployed handler directly. Do not declare a cron subscription: WarmHub only supports webhook
-subscriptions. Authenticate the scheduler request with the handler's own access controls.
-
-## Credentials On Subscriptions
-
-To authenticate inbound deliveries, bind a credential set with `WEBHOOK_*` keys:
-
-```json
-{
-  "subscriptions": [
-    {
-      "name": "incident/process-event",
-      "trigger": { "kind": "event", "shape": "IncidentEvent" },
       "webhookUrl": "https://handler.example.com/incident/process",
-      "credentials": ["digest-runtime"]
+      "fallbackWebhookUrl": "https://handler.example.com/incident/failure",
+      "credentials": ["incident-webhook"]
     }
   ]
 }
 ```
 
-Current runtime constraint: one credential set per subscription.
+- `trigger.shape` is required for commit events and must be a declared shape or subscription-trigger
+  built-in. `filter` is optional.
+- Metadata triggers (`repo.renamed`, `thing.renamed`, `shape.renamed`) have no shape or filter.
+- A fallback URL receives a terminal-failure notification. It is not a retry route and does not process
+  the original event.
+- Bind at most one declared credential set. See `action-container-credentials.md` for authentication
+  and signing.
+- For recurring work, use an external scheduler with the handler's own access controls.
 
-## Health And Teardown
+## Provisioning and doctor
 
-Declare the subscriptions that must exist and how teardown should treat them.
+Use `provisioning: "setup"` only when the registered setup endpoint creates this subscription with
+its scoped setup token. Otherwise omit it for normal manifest provisioning. Setup replay can update a
+setup-owned URL only within the manifest's allowed origin/template and cannot change trigger/source
+or turn trace reentry on.
 
-```json
-{
-  "health": {
-    "requires": {
-      "subscriptions": [
-        "incident/process-event"
-      ]
-    }
-  },
-  "teardown": {
-    "subscriptions": {
-      "onDisable": "pause",
-      "onUninstall": "pause"
-    }
-  }
-}
-```
+`health.requires` is reserved metadata and is not currently evaluated. Doctor checks resources
+declared directly in the installed manifest, including subscription activity, credentials, shapes,
+and seeds; do not present `health.requires` as an enforced contract.
 
-Recommended default:
-- `onDisable: "pause"`
-- only use `onUninstall: "delete"` when you are confident the subscription should disappear
-  completely rather than pause for later recovery
+## Update, teardown, and operator control
 
-## Wiring Checklist
+Update creates missing subscriptions and can revise declared mutable configuration, but it does not
+delete subscriptions absent from the newer manifest. It never resumes a paused subscription. Terminal
+component teardown pauses owned subscriptions, preserves their rows and ownership, and does not start
+the handler or any external scheduler on reinstall. Preserve a user-operated handler and any manual
+pause/resume decision; use `wh sub resume <name>` only when the operator asks to reactivate it.
 
-Before installing, confirm:
-- every subscription has a public HTTPS `webhookUrl`
-- event subscriptions watch the intended input shape
-- output writes land in a different shape unless a loop is deliberate
-- secret-backed subscriptions bind exactly one credential set
-- health requires the subscriptions you expect to stay active
-- teardown policy matches the operator expectation for disable vs uninstall
+Before install, confirm the endpoint is deployed and reachable, handler output does not self-trigger,
+credential binding matches handler verification, and the fallback receiver is an alert endpoint.
