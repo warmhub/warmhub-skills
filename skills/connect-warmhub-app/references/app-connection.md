@@ -2,8 +2,8 @@
 
 ## MCP-capable agents
 
-For agent-native integration, connect the client to `POST ${WARMHUB_API_URL}/mcp` (production:
-`https://api.warmhub.ai/mcp`). This is one global endpoint and one catalog: repository tools receive
+For agent-native integration, connect the client to `POST https://mcp.warmhub.ai/mcp`. This is one
+global endpoint and one catalog: repository tools receive
 `orgName` and `repoName` as arguments. Do not configure a repo-scoped MCP URL or catalog.
 
 `initialize`, `tools/list`, and OAuth discovery work before authentication. Let standards-compliant
