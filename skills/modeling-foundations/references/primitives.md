@@ -214,9 +214,9 @@ Ask whether reversing the two endpoints changes the relationship.
 
 Never use input order as a direction on a Bond: its ends are canonicalized. Use Arc whenever each endpoint has a distinct semantic role.
 
-Arc and Bond require two distinct durable identities. Pair remains readable and writable for compatibility, but new models must use Arc or Bond; its `first` / `second` order is not promoted as relationship vocabulary.
+Arc and Bond require two distinct durable identities. Pair remains readable for compatibility but is retired for writes, so new models must use Arc or Bond; its `first` / `second` order is not promoted as relationship vocabulary.
 
-Existing Pair data is not automatically migrated, aliased, backfilled, or write-blocked. If a content owner intentionally remodels a directed Pair as an Arc, create the replacement Arc and assertions, then retract the old Pair in the same commit so one logical edge does not have two active relationship subjects.
+Existing Pair data is not automatically migrated, aliased, or backfilled, and stays readable forever; new Pair writes are refused. If a content owner intentionally remodels a directed Pair as an Arc, create the replacement Arc and assertions, then retract the old Pair in the same commit so one logical edge does not have two active relationship subjects.
 
 For a genuine three-way relation, don't reach for a collection at all — model it as a named domain shape or assertion with its own fields. Reserve `set`/`list` for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing.
 
@@ -226,7 +226,7 @@ For a genuine three-way relation, don't reach for a collection at all — model 
 
 ```bash
 wh commit submit --ops '[
-  {"operation": "add", "kind": "collection", "type": "arc", "name": "vent-resolution-x", "members": ["Vent/X", "Workaround/Y"]},
+  {"operation": "add", "kind": "thing", "name": "Arc/vent-resolution-x", "data": {"from": "Vent/X", "to": "Workaround/Y"}},
   {"operation": "add", "kind": "assertion", "name": "Resolution/vent-x", "about": "Arc/vent-resolution-x", "data": {}}
 ]' -m "Add vent resolution"
 ```
@@ -239,7 +239,7 @@ about: "Set/cell-adjacency-0-0-0-1"  // Set, created by a prior collection op
 about: "List/cell-path-a"     // List, created by a prior collection op
 ```
 
-Valid collection `type` values on the `add`/`kind: "collection"` op are `arc`, `bond`, `set`, and `list`. `pair` is accepted only for compatibility. Collection names must not contain `+`; use a readable slug instead.
+Valid collection `type` values on the `add`/`kind: "collection"` op are `set` and `list`; write `arc` and `bond` as ordinary Things, and `pair` is retired for writes. Collection names must not contain `+`; use a readable slug instead.
 
 ### Querying through collections
 

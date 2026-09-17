@@ -2,11 +2,11 @@
 
 This file applies when you have an existing populated WarmHub graph and you need to change something the immutable-`about` rule won't let you change in place. Three common triggers:
 
-- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design emits a named `kind: "collection"` op (`type: "arc"`, `"bond"`, `"set"`, or `"list"`, a stable `name`, and `members`) and then targets the assertion at that collection's wref. `about` accepts a wref only; an inline collection object is rejected.
+- **Arity change.** A relationship was modeled with `about: <single-thing>` and a flat string field for the other endpoint (the canonical "v1 anti-pattern" — see `../../modeling-foundations/references/pitfalls.md` § About-Target Arity Mismatch); the right design emits the relationship as its own named op — an ordinary `kind: "thing"` under `Arc/` (`data: {from, to}`) or `Bond/` (`data: {ends}`), or a `kind: "collection"` op for `set`/`list` with `members` — and then targets the assertion at that wref. `about` accepts a wref only; an inline collection object is rejected.
 - **Shape semantic change.** A v1 shape gets revised to mean something different, or split into two shapes; existing assertions targeting it now have the wrong target shape.
 - **Subject swap.** A v1 design asserts about the wrong target (e.g. `about: Filing` when the navigation axis should have been `about: Company`); the new design points at a different thing.
 
-Pair compatibility is not a migration trigger: existing Pair data remains accepted, readable, writable, and unaliased. Use this guide for Pair only when its owner intentionally remodels it as an Arc; create the replacement Arc and assertions, then retract the old Pair in the same commit. Do not backfill it automatically.
+Pair compatibility is not a migration trigger: existing Pair data remains readable and unaliased, though Pair writes are retired. Use this guide for Pair only when its owner intentionally remodels it as an Arc; create the replacement Arc and assertions, then retract the old Pair in the same commit. Do not backfill it automatically.
 
 In all three cases the v1 assertions can't be edited in place; they have to be **retracted and re-asserted** under the v2 design. And because every assertion's `about` is immutable, the retraction **cascades** through every dependent assertion targeting the retracted assertion.
 

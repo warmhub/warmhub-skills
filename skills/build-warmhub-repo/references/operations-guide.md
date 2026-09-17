@@ -38,23 +38,23 @@ Invalid operation ... about accepts a wref. Create the collection as its own nam
 point the assertion at it.
 ```
 
-Emit the collection as its own named `add` op first, then point the assertion's `about` at that
-collection wref:
+Emit the relationship as its own named `add` op first, then point the assertion's `about` at it.
+Arc (directed, `from`/`to`) and Bond (symmetric, `ends`) are ordinary Things under their protected
+Shapes; Set and List still take the `kind: 'collection'` form with `members`:
 
 ```typescript
-const addCollection: Operation = {
+const addBond: Operation = {
   operation: 'add',
-  kind: 'collection',
-  type: 'bond', // 'arc' | 'bond' | 'set' | 'list'
-  name: 'duplicate-ticket-a-ticket-b',
-  members: ['TicketProxy/a', 'TicketProxy/b'],
+  kind: 'thing',
+  name: 'Bond/duplicate-ticket-a-ticket-b',
+  data: { ends: ['TicketProxy/a', 'TicketProxy/b'] },
 }
 
 const addRelationship: Operation = {
   operation: 'add',
   kind: 'assertion',
   name: 'DuplicateAssertion/set-abc123',
-  about: 'Set/duplicate-ticket-a-ticket-b',
+  about: 'Bond/duplicate-ticket-a-ticket-b',
   data: {
     subjectWref: 'TicketProxy/a',
     objectWref: 'TicketProxy/b',
@@ -63,10 +63,9 @@ const addRelationship: Operation = {
 }
 ```
 
-The collection wref the assertion points at is `<Type>/<name>` — `Arc/…`, `Bond/…`, `Set/…`,
-`List/…` — matching the collection op's `type` and `name`. Do **not** hand-invent an opaque or
-hashed collection wref that no op creates; the assertion must reference a collection op present in
-the same (or a prior) commit.
+The wref the assertion points at is `<Shape>/<name>` — `Arc/…`, `Bond/…`, `Set/…`, `List/…` —
+the name of the relationship or collection op. Do **not** hand-invent an opaque or hashed wref that
+no op creates; the assertion must reference an op present in the same (or a prior) commit.
 
 Give the collection op a **deterministic, source-derived name** — e.g. derived from its sorted
 members plus the relationship kind — so re-runs resolve to the same collection wref. This
