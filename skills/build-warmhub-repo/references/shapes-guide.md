@@ -143,5 +143,6 @@ wh shape revise Lender --repo <org>/<repo> \
   --fields '{"lender_name":"string","state":"string","city":"string","institution?":"string"}'
 ```
 
-The SDK equivalent is `client.shape.revise(org, repo, shapeName, fields)`. Both the CLI and SDK use
+The SDK equivalent is
+`client.shape.revise(org, repo, shapeName, fields, { eventRequestId })`. Both the CLI and SDK use
 `revise` and require the complete field definition. You cannot add a single field incrementally.

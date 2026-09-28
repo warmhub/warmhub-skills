@@ -378,12 +378,12 @@ existing declaration unless the user explicitly confirms replacement, and never 
 claim legal suitability. An explicit decision to remain undeclared is valid and makes no write.
 
 For a confirmed write, inspect the exact native instance state and use only the well-known
-`LicenseDeclaration/repo` assertion about `LicenseSubject/repo`. When neither instance exists, add
-the subject and declaration atomically so the native shapes materialize lazily. Resolve a single
-SPDX identifier to a canonical pinned wref; preserve compound `OR` / `AND` / `WITH` expressions
-without a false `licenseWref`. Guard revisions with the current version, then verify the exact
-instances, `wh repo describe`, public-repo doctor output, the UI badge/panel when available, and
-README/root `LICENSE` alignment.
+`LicenseDeclaration/license` assertion about `LicenseSubject/license/subject`. When neither
+instance exists, add the subject and declaration atomically so the native shapes materialize
+lazily. Resolve a single SPDX identifier to a canonical pinned wref; preserve compound
+`OR` / `AND` / `WITH` expressions without a false `licenseWref`. Guard revisions with the current
+version, then verify the exact instances, `wh repo describe`, public-repo doctor output, the UI
+badge/panel when available, and README/root `LICENSE` alignment.
 
 ## Step 10: Set Up Automation
 
