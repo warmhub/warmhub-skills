@@ -384,7 +384,7 @@ Q5.1 — describeRepo (on both repos) identifies which is substrate and which is
 
 Q5.2 — From a substrate entity, wh thing refs --inbound returns BOTH same-repo refs
   AND cross-repo refs from the consumer repo in one call.
-  wh thing refs Facility/example --repo <substrate-repo> --inbound
+  wh thing refs example --repo <substrate-repo> --inbound
   Expected: result includes same-repo Demographics / FrsProgramLink AND cross-repo
   EmissionsRecord from the consumer repo, in one response. (Cross-repo refs
   appear in the inbound list when consumer repos hold typed wrefs into the

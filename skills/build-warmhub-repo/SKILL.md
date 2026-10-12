@@ -368,7 +368,7 @@ wh repo content get <org>/<repo> --kind readme
 wh repo content get <org>/<repo> --kind agents
 ```
 
-Do not finish the stage until `Content/Readme` matches `README.md` and `Content/Agents` matches
+Do not finish the stage until `Readme` matches `README.md` and `Agents` matches
 `AGENTS.md`. If a set or readback fails, report the exact command and leave documentation incomplete.
 
 ## Step 9a: Confirm and Verify the Repository License
@@ -378,7 +378,7 @@ existing declaration unless the user explicitly confirms replacement, and never 
 claim legal suitability. An explicit decision to remain undeclared is valid and makes no write.
 
 For a confirmed write, inspect the exact native instance state and use only the well-known
-`LicenseDeclaration/license` assertion about `LicenseSubject/license/subject`. When neither
+`license` assertion (Shape `LicenseDeclaration`) about `license/subject` (Shape `LicenseSubject`). When neither
 instance exists, add the subject and declaration atomically so the native shapes materialize
 lazily. Resolve a single SPDX identifier to a canonical pinned wref; preserve compound
 `OR` / `AND` / `WITH` expressions without a false `licenseWref`. Guard revisions with the current
@@ -418,7 +418,7 @@ Verify: `wh sub list --repo <org>/<repo>`
 Do not mutate a public catalog from this skill. Prepare the terminal repo handoff material instead:
 
 - repo path and WarmHub repo identity
-- root `README.md` / `AGENTS.md` and their `Content/Readme` / `Content/Agents` readback receipts
+- root `README.md` / `AGENTS.md` and their `Readme` / `Agents` readback receipts
 - license decision plus native-instance, describe, UI, README, and root `LICENSE` receipts when declared
 - setup, first-ingest, QC, test, and relationship-verifier commands run
 - validation receipts, caveats, and skipped or blocked live checks
@@ -436,8 +436,8 @@ fields when this is the terminal stage; otherwise include them in the next-step 
 - **Handler auth is via `WH_TOKEN` PAT** — the deployed handler writes back to WarmHub with its own PAT; inbound deliveries are verified via a bound `WEBHOOK_*` credential set. There is no per-run stdin token
 - **Shape optional fields** — use `"field?": "type"` syntax, not a separate optional flag
 - **Shape updates** — use `wh shape revise` with the full field set; you cannot add a single field in isolation
-- **Commit attribution** — if you pass `opts.committer` to `client.commit.apply`, it must be a full
-  existing thing wref such as `Agent/data-ingest`, not a bare name
+- **Commit attribution** — if you pass `opts.committer` to `client.commit.apply`, it must be the
+  wref of an existing thing, such as `data-ingest`
 - **Assertion `about` field** — required on `add`, omitted on `revise`
 - **Collection `about` values** — `about` accepts a wref only; inline `{ "arc": [...] }` / `{ "bond": [...] }`
   objects are rejected. Emit the collection as its own named `add` op (`kind: "collection"`, `type`,

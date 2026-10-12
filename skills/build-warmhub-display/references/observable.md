@@ -108,8 +108,8 @@ For Framework:
 
 Use SDK row fields, not CLI JSON fields. `client.thing.queryAll` and `headAll` rows expose:
 
-- `wref`: full WarmHub reference, e.g. `CoffeeBean/ethiopia-yirgacheffe`.
-- `name`: local name only, e.g. `ethiopia-yirgacheffe`.
+- `wref`: the Thing's WarmHub reference, which is its name, e.g. `ethiopia-yirgacheffe`.
+- `name`: the Thing's name, e.g. `ethiopia-yirgacheffe`.
 - `data`: current payload.
 - `version`: current numeric version.
 - `aboutWref`: assertion target for assertion rows.

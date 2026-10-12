@@ -50,12 +50,12 @@ Resolution  ──about──▶  Arc[Vent, ResolutionTarget]
 
 | Question | Traversal | Answers as graph operation |
 |---|---|---|
-| What resolved this vent? | `wh thing about Vent/X --resolve-collections` | ✓ |
-| Which vents does this workaround resolve? | `wh thing about Workaround/Y --resolve-collections` | ✓ |
-| All unresolved vents about a FrictionTarget | `thing about FrictionTarget/Z --shape Vent` ⊖ vents in any Resolution Arc | ✓ derived |
+| What resolved this vent? | `wh thing about X --resolve-collections` | ✓ |
+| Which vents does this workaround resolve? | `wh thing about Y --resolve-collections` | ✓ |
+| All unresolved vents about a FrictionTarget | `thing about Z --shape Vent` ⊖ vents in any Resolution Arc | ✓ derived |
 | All vents addressed by any fix on FrictionTarget Z | walk Z → Vent → Resolution → ResolutionTarget | ✓ 3-hop traversal |
 
-A single design choice — a named Arc collection created by a prior op, then `about: "Arc/<name>"` — yields all four queries for free.
+A single design choice — a named Arc collection created by a prior op, then `about: "<arc-name>"` — yields all four queries for free.
 
 ### Worked example: a duplicate-ticket graph's DuplicateAssertion (fails)
 
@@ -141,7 +141,7 @@ Why this matters for design: the `about` **arity** — whether an assertion is a
 
 From the docs:
 
-> **The about target determines what you'll browse by.** If you assert about `Company/acme`, you can later query "everything we believe about Acme." If you instead assert about `Filing/acme/10-k/2024`, your beliefs cluster around individual filings — a different navigation axis.
+> **The about target determines what you'll browse by.** If you assert about `acme`, you can later query "everything we believe about Acme." If you instead assert about `acme/10-k/2024`, your beliefs cluster around individual filings — a different navigation axis.
 
 Choose based on **what will you most often want to ask "what do we know about X?" for**. The `about` arity decision is not just a foreign-key choice; it's the design of your traversal surface.
 
@@ -151,8 +151,8 @@ The write pipeline verifies that the `about` target exists. If it doesn't, the a
 
 ```bash
 wh commit submit --ops '[
-  {"operation": "add", "kind": "thing", "name": "Company/acme", "data": {"industry": "fintech"}},
-  {"operation": "add", "kind": "assertion", "name": "Thesis/acme-bull", "about": "Company/acme", "data": {"outlook": "bullish"}}
+  {"operation": "add", "name": "acme", "shapes": ["Company"], "data": {"industry": "fintech"}},
+  {"operation": "add", "name": "acme-bull", "shapes": ["Thesis"], "data": {"about": "acme", "outlook": "bullish"}}
 ]' -m "Add company with initial thesis"
 ```
 
@@ -188,7 +188,7 @@ the graph remains alpha for any query that depends on that edge.
 
 From the docs:
 
-> **Don't rely solely on the about wref to carry key identifiers.** If an assertion is about `Company/acme`, include the company name or ticker in the assertion's data too — this makes the assertion self-describing when read in isolation, without requiring a follow-up query to resolve the about target.
+> **Don't rely solely on the about wref to carry key identifiers.** If an assertion is about `acme`, include the company name or ticker in the assertion's data too — this makes the assertion self-describing when read in isolation, without requiring a follow-up query to resolve the about target.
 
 This is a context-free-legibility rule — mirror identifying data onto the assertion so it reads on its own — and it compounds with the collection-mirroring rule below.
 
@@ -226,17 +226,17 @@ For a genuine three-way relation, don't reach for a collection at all — model 
 
 ```bash
 wh commit submit --ops '[
-  {"operation": "add", "kind": "thing", "name": "Arc/vent-resolution-x", "data": {"from": "Vent/X", "to": "Workaround/Y"}},
-  {"operation": "add", "kind": "assertion", "name": "Resolution/vent-x", "about": "Arc/vent-resolution-x", "data": {}}
+  {"operation": "add", "name": "vent-resolution-x", "shapes": ["Arc"], "data": {"from": "X", "to": "Y"}},
+  {"operation": "add", "name": "vent-x-resolution", "shapes": ["Resolution"], "data": {"about": "vent-resolution-x"}}
 ]' -m "Add vent resolution"
 ```
 
 ```js
-about: "Location/A"           // single thing
-about: "Arc/vent-resolution-x"    // directed binary relationship
-about: "Bond/duplicate-a-b"        // symmetric binary relationship
-about: "Set/cell-adjacency-0-0-0-1"  // Set, created by a prior collection op
-about: "List/cell-path-a"     // List, created by a prior collection op
+about: "A"                        // single thing
+about: "vent-resolution-x"        // an Arc: directed binary relationship
+about: "duplicate-a-b"            // a Bond: symmetric binary relationship
+about: "cell-adjacency-0-0-0-1"   // a Set, created by a prior collection op
+about: "cell-path-a"              // a List, created by a prior collection op
 ```
 
 Valid collection `type` values on the `add`/`kind: "collection"` op are `set` and `list`; write `arc` and `bond` as ordinary Things, and `pair` is retired for writes. Collection names must not contain `+`; use a readable slug instead.
@@ -246,9 +246,9 @@ Valid collection `type` values on the `add`/`kind: "collection"` op are `set` an
 By default, `wh thing about <X>` returns assertions whose `about` is exactly `<X>`. Assertions whose `about` is a collection containing `<X>` are **not** returned without an explicit flag:
 
 ```bash
-wh thing about Location/A                       # direct only
-wh thing about Location/A --resolve-collections # also includes Arc/Bond/Set/etc. containing A
-wh thing about Location/A --resolve-collections --role from # Arc source-side only
+wh thing about A                       # direct only
+wh thing about A --resolve-collections # also includes Arc/Bond/Set/etc. containing A
+wh thing about A --resolve-collections --role from # Arc source-side only
 ```
 
 Collection resolution is HEAD-only — it finds collections that currently contain the thing. It does not resolve historical memberships.

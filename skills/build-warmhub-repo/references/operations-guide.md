@@ -9,62 +9,61 @@ import type { Operation } from '@warmhub/sdk-ts'
 
 const addThing: Operation = {
   operation: 'add',
-  kind: 'thing',
-  name: 'Lender/my-lender-slug',
+  name: 'my-lender-slug',
+  shapes: ['Lender'],
   data: { lender_name: 'My Lender', state: 'CA', city: 'San Francisco' },
 }
 
 const addAssertion: Operation = {
   operation: 'add',
-  kind: 'assertion',
-  name: 'LenderActivity/my-lender-slug/fy2026-m05',
-  about: 'Lender/my-lender-slug',
-  data: { period: 'ReportingPeriod/fy2026-m05', num_approvals: 42 },
+  name: 'my-lender-slug/fy2026-m05',
+  shapes: ['LenderActivity'],
+  data: { about: 'my-lender-slug', period: 'period/fy2026-m05', num_approvals: 42 },
 }
 
 const reviseAssertion: Operation = {
   operation: 'revise',
-  kind: 'assertion',
-  name: 'Assessment/fy2026-m05/totals-crosscheck',
+  name: 'fy2026-m05/totals-crosscheck',
+  shapes: ['Assessment'],
   data: { passed: true, confidence: 0.95 },
 }
 ```
 
 For collection-targeted assertions (`about` cardinality of `Arc` / `Bond` / `Set` / `List`), the
-`about` field accepts a **wref only** — an inline collection object is rejected:
+`data.about` field accepts a **wref only** — an inline collection object is rejected:
 
 ```
 Invalid operation ... about accepts a wref. Create the collection as its own named operation, then
 point the assertion at it.
 ```
 
-Emit the relationship as its own named `add` op first, then point the assertion's `about` at it.
-Arc (directed, `from`/`to`) and Bond (symmetric, `ends`) are ordinary Things under their protected
-Shapes; Set and List still take the `kind: 'collection'` form with `members`:
+Emit the relationship as its own named `add` op first, then point the assertion's `data.about` at it.
+Arc (directed, `from`/`to`), Bond (symmetric, `ends`), Set and List (`members`) are ordinary Things
+under their protected Shapes:
 
 ```typescript
 const addBond: Operation = {
   operation: 'add',
-  kind: 'thing',
-  name: 'Bond/duplicate-ticket-a-ticket-b',
-  data: { ends: ['TicketProxy/a', 'TicketProxy/b'] },
+  name: 'duplicate-ticket-a-ticket-b',
+  shapes: ['Bond'],
+  data: { ends: ['ticket-a', 'ticket-b'] },
 }
 
 const addRelationship: Operation = {
   operation: 'add',
-  kind: 'assertion',
-  name: 'DuplicateAssertion/set-abc123',
-  about: 'Bond/duplicate-ticket-a-ticket-b',
+  name: 'duplicate-ticket-a-ticket-b/assertion',
+  shapes: ['DuplicateAssertion'],
   data: {
-    subjectWref: 'TicketProxy/a',
-    objectWref: 'TicketProxy/b',
+    about: 'duplicate-ticket-a-ticket-b',
+    subjectWref: 'ticket-a',
+    objectWref: 'ticket-b',
     reason: 'same upstream incident',
   },
 }
 ```
 
-The wref the assertion points at is `<Shape>/<name>` — `Arc/…`, `Bond/…`, `Set/…`, `List/…` —
-the name of the relationship or collection op. Do **not** hand-invent an opaque or hashed wref that
+The wref the assertion points at is the `name` of the relationship or collection op, with no Shape
+prefix: a Thing's wref is its name. Do **not** hand-invent an opaque or hashed wref that
 no op creates; the assertion must reference an op present in the same (or a prior) commit.
 
 Give the collection op a **deterministic, source-derived name** — e.g. derived from its sorted
@@ -90,11 +89,14 @@ inline commit JSON, `wh commit submit --ops '[...]'` is valid; for an ops file, 
 
 ## Naming Conventions
 
-- things: `<ShapeName>/<slug>`
-- assertions: `<ShapeName>/<entity-slug>/<period-label>`
-- periods: `ReportingPeriod/<label>`
-- summaries: `ProgramSummary/<period-label>`
-- assessments: `Assessment/<period-label>/<check-name>`
+Thing names are unique across all Shapes in a repo, so a name that could collide across Shapes
+carries its own distinguishing segment. The Shape goes in `shapes`, never in the name.
+
+- things: `<slug>`
+- assertions: `<entity-slug>/<period-label>`
+- periods: `period/<label>`
+- summaries: `summary/<period-label>`
+- assessments: `<period-label>/<check-name>`
 
 Use deterministic, source-derived names so retries are safe.
 
@@ -185,8 +187,14 @@ async function applyEntityAdds(batch: Operation[]) {
       const match = msg.match(/Thing "([^"]+)" already exists/)
       if (!isConflict || !match) throw err
 
-      const conflicting = `Lender/${match[1]}`
-      pending = pending.filter((op) => op.name !== conflicting)
+      // A same-Shape duplicate's message may still spell the name as
+      // `<Shape>/<name>`, so match either spelling.
+      const conflicting = match[1]
+      pending = pending.filter(
+        (op) =>
+          op.name !== conflicting &&
+          !('shapes' in op && `${op.shapes?.[0]}/${op.name}` === conflicting),
+      )
     }
   }
 }
@@ -195,11 +203,11 @@ async function applyEntityAdds(batch: Operation[]) {
 Critical rule: remove only the conflicting operation, not the whole batch.
 
 If you do not need explicit attribution, omit the `opts` argument. If you do pass
-`opts.committer`, it must be a full thing wref such as `Agent/data-ingest` or
-`wh:other-org/other-repo/Agent/bot-1`; bare names such as `data-ingest` are rejected.
+`opts.committer`, it must be the wref of an existing Thing, such as `data-ingest` or
+`wh:other-org/other-repo/bot-1`.
 
 ```typescript
-await client.commit.apply(org, repo, message, pending, { committer: 'Agent/data-ingest' })
+await client.commit.apply(org, repo, message, pending, { committer: 'data-ingest' })
 ```
 
 ## Dedup And Idempotency
@@ -233,7 +241,7 @@ appropriate.
 ```typescript
 async function getExistingIngest(client: WarmHubClient, periodLabel: string) {
   try {
-    const thing = await client.thing.get(org, repo, `IngestRecord/${periodLabel}`)
+    const thing = await client.thing.get(org, repo, `ingest/${periodLabel}`)
     const data = thing.data as Record<string, unknown> | undefined
     if (data?.file_hash) return { fileHash: String(data.file_hash) }
   } catch (err) {

@@ -80,13 +80,13 @@ wh repo create $ORG/probe-b -P dev
 # target thing in A; in B, a thing whose shape declares `link` as a wref field,
 # pointing cross-repo at A's target:
 wh commit submit --repo $ORG/probe-a -P dev -m probe \
-  --ops '[{"operation":"add","kind":"thing","name":"Target/t1","data":{}}]'
+  --ops '[{"operation":"add","name":"t1","shapes":["Target"],"data":{}}]'
 wh commit submit --repo $ORG/probe-b -P dev -m probe \
-  --ops '[{"operation":"add","kind":"thing","name":"Consumer/c1","data":{"link":"wh:'"$ORG"'/probe-a/Target/t1"}}]'
+  --ops '[{"operation":"add","name":"c1","shapes":["Consumer"],"data":{"link":"wh:'"$ORG"'/probe-a/t1"}}]'
 
 # reverse traversal from the TARGET's repo — the two indexes diverge here:
-wh thing about Target/t1 --repo $ORG/probe-a -P dev          # about-index: repo-local — returns 0, won't see B
-wh thing refs  Target/t1 --inbound --repo $ORG/probe-a -P dev # refs-index: fans out cross-repo — returns Consumer/c1
+wh thing about t1 --repo $ORG/probe-a -P dev          # about-index: repo-local — returns 0, won't see B
+wh thing refs  t1 --inbound --repo $ORG/probe-a -P dev # refs-index: fans out cross-repo — returns c1
 
 wh repo archive $ORG/probe-a -P dev ; wh repo archive $ORG/probe-b -P dev   # tear down
 ```

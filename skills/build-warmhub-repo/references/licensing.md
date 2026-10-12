@@ -35,7 +35,7 @@ is a valid completion state: record it and make no declaration write.
 Before any write, show one final payload summary and require explicit human confirmation of:
 
 - the exact SPDX identifier or compound expression;
-- that `LicenseSubject/license/subject` represents the entire repo, plus `appliesTo` and any
+- that `license/subject` represents the entire repo, plus `appliesTo` and any
   scope caveat;
 - `declaredBy`;
 - the upstream `sourceUrl` when the repo redistributes material;
@@ -51,8 +51,8 @@ claims, or legal conclusions.
 require the shapes to exist before the first declaration. Read the two exact well-known instances:
 
 ```bash
-wh thing view LicenseSubject/license/subject --repo <org>/<repo> --json
-wh assertion view LicenseDeclaration/license --repo <org>/<repo> --json
+wh thing view license/subject --repo <org>/<repo> --json
+wh assertion view license --repo <org>/<repo> --json
 ```
 
 Treat a not-found result as absence only for that exact instance. Never treat authorization,
@@ -67,13 +67,13 @@ Classify the result before writing:
   explicit replacement confirmation.
 - If only the declaration exists, stop and report the inconsistent state.
 - If either exact wref exists with the wrong kind, shape, scope, or target, stop and report the
-  conflict. `LicenseSubject/license/subject` must be a `LicenseSubject` thing with `scope: "repo"`;
-  `LicenseDeclaration/license` must be a `LicenseDeclaration` assertion about
-  `LicenseSubject/license/subject`.
+  conflict. `license/subject` must be a `LicenseSubject` thing with `scope: "repo"`;
+  `license` must be a `LicenseDeclaration` assertion about
+  `license/subject`.
 
 If a commit reports a native-shape name conflict, stop and report it. Do not rename or replace an
 existing shape without a separately approved migration. Create only that well-known repo-scope
-assertion about `LicenseSubject/license/subject`; do not create a second repo-wide declaration.
+assertion about `license/subject`; do not create a second repo-wide declaration.
 
 ## 3. Resolve the confirmed license form
 
@@ -123,16 +123,15 @@ When neither instance exists, write this atomic operation file using the confirm
 [
   {
     "operation": "add",
-    "kind": "thing",
-    "name": "LicenseSubject/license/subject",
+    "name": "license/subject",
+    "shapes": ["LicenseSubject"],
     "data": { "scope": "repo" }
   },
   {
     "operation": "add",
-    "kind": "assertion",
-    "name": "LicenseDeclaration/license",
-    "about": "LicenseSubject/license/subject",
-    "data": { "spdxIdRaw": "<confirmed-id-or-expression>" }
+    "name": "license",
+    "shapes": ["LicenseDeclaration"],
+    "data": { "about": "license/subject", "spdxIdRaw": "<confirmed-id-or-expression>" }
   }
 ]
 ```
@@ -149,14 +148,14 @@ If only the valid subject exists, remove the subject operation and submit only t
 For a confirmed replacement, first inspect the active assertion:
 
 ```bash
-wh assertion view LicenseDeclaration/license --repo <org>/<repo> --json
+wh assertion view license --repo <org>/<repo> --json
 ```
 
-Use its current version and a complete, reconfirmed native data object in the concurrency-aware
-write:
+Use its current version and a complete, reconfirmed data object (the native license fields plus
+the existing `about`) in the concurrency-aware write:
 
 ```bash
-wh commit submit --revise LicenseDeclaration/license --kind assertion \
+wh commit submit --revise license --keep-shapes \
   --data '<confirmed-complete-data-json>' --expected-version <current-version> \
   -m "revise repository license" --repo <org>/<repo>
 ```
@@ -169,8 +168,8 @@ the current declaration and ask the user to confirm against the changed state be
 After a successful write, always run:
 
 ```bash
-wh thing view LicenseSubject/license/subject --repo <org>/<repo> --json
-wh assertion view LicenseDeclaration/license --repo <org>/<repo>
+wh thing view license/subject --repo <org>/<repo> --json
+wh assertion view license --repo <org>/<repo>
 wh repo describe <org>/<repo> --json
 ```
 
@@ -184,7 +183,7 @@ Private repositories intentionally have no repository-license doctor check. For 
 subject read, assertion read, and `repo describe` are the complete machine verification. Do not
 interpret the absence of a private-repo doctor result as missing verification.
 
-Verify that the assertion is active and about `LicenseSubject/license/subject`. The describe
+Verify that the assertion is active and about `license/subject`. The describe
 `license` block must match every confirmed field. It must expose the canonical pinned
 `licenseWref` for a single SPDX identifier and `licenseWref: null` for a compound or custom/raw
 declaration. Treat any mismatch as failed verification.
@@ -195,7 +194,7 @@ a false canonical link.
 
 ## 6. Align README and root LICENSE
 
-Treat `LicenseDeclaration/license` as the machine truth. Update the README license section to
+Treat the `license` declaration as the machine truth. Update the README license section to
 match the confirmed declaration, publish it, and compare the readback with the local file:
 
 ```bash

@@ -177,3 +177,20 @@ Initial public skills snapshot.
 - veritas-design: 8ecac805..5ee8f4f3
 - warmhub-builder: 8ecac805..5ee8f4f3
 - wh-commit-design: 8ecac805..5ee8f4f3
+
+## 2026-10-12 — promotion
+<!-- warmhub-promotion:2e9b56fe527698d6922ba385cd253a914576a24c -->
+
+- add-warmhub-component: 5ee8f4f3..2e9b56fe
+- build-warmhub-collector: 5ee8f4f3..2e9b56fe
+- build-warmhub-display: 5ee8f4f3..2e9b56fe
+- build-warmhub-repo: 5ee8f4f3..2e9b56fe
+- connect-warmhub-app: 5ee8f4f3..2e9b56fe
+- design-warmhub-repo: 5ee8f4f3..2e9b56fe
+- discover-warmhub-repo: 5ee8f4f3..2e9b56fe
+- find-self-verifying-objectives: 5ee8f4f3..2e9b56fe
+- modeling-foundations: 5ee8f4f3..2e9b56fe
+- plan-warmhub-ingestion: 5ee8f4f3..2e9b56fe
+- veritas-design: 5ee8f4f3..2e9b56fe
+- warmhub-builder: 5ee8f4f3..2e9b56fe
+- wh-commit-design: 5ee8f4f3..2e9b56fe

@@ -162,7 +162,7 @@ This is the simplest payoff: source-centric backrefs without full-text search.
 ### Q1.7 — What remedies have been proposed for X?
 
 ```
-wh thing about FiledDefectIssue/X --shape PreventionOpportunity
+wh thing about X --shape PreventionOpportunity
   → for each opportunity:
       wh thing about <opportunity> --shape DetectionRemedyHypothesis
 ```

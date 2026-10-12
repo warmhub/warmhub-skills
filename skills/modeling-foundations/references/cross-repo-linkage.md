@@ -33,7 +33,7 @@ typed wref. That interim is legitimate only when it is explicit and inert:
    traversable edge. Name it like `facilityRawKey` or `facilityIdHint`, not `facilityWref`.
 2. **Payload is inert.** The hint carries no credential, token, private locator, or host-only lookup
    secret. It is a public or source-authorized join key that a later resolver can use.
-3. **Resolved links are absolute.** When the target is known, write a full `wh:org/repo/Shape/name`
+3. **Resolved links are absolute.** When the target is known, write a full `wh:org/repo/<name>`
    wref (letting the platform pin it) or an explicit pinned wref if the workflow requires a fixed
    version. Do not write repo-local shorthand for cross-repo targets.
 4. **Re-resolution is scheduled.** The ingestion plan names the resolver pass, cadence, and failure
