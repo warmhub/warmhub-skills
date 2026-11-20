@@ -70,7 +70,7 @@ Planning checklist:
 - Webhook subscriptions and external schedulers state the handler authentication they need.
 - Webhook handlers read and authenticate the raw body before parsing. When any Standard Webhooks
   header is present, its complete valid signature is authoritative; use `webhook-id` for durable
-  delivery dedup, treat `repoSeq` as optional ordering metadata, and state retry/dead-letter/fallback
+  delivery dedup, treat `graphSeq` as optional ordering metadata, and state retry/dead-letter/fallback
   handling. Credential revocation stops delivery fail-closed; deletion or unbinding permits unsigned
   delivery.
 - Bulk writes use client-grouped JSONL. Each bounded server preflight is non-reserving; receipt

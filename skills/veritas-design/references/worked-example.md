@@ -7,15 +7,18 @@ This example designs a code-review repo where several sources judge whether a pu
 Create the durable subject Thing and one stable proposition assertion per pull request:
 
 ```text
-PullRequest/pr-123
-PullRequestRegression/pr-123
-about = PullRequest/pr-123
+pull-requests/pr-123     shapes: [PullRequest]
+pr-regressions/pr-123    shapes: [PullRequestRegression]
+data.about = pull-requests/pr-123
 ```
 
-`PullRequestRegression/pr-123` is the proposition assertion. It means: "PR 123 introduced a
+Names are unique across the repository, so the subject and the proposition use different
+prefixes. The prefix does not set the Shape; each write declares it in `shapes`.
+
+`pr-regressions/pr-123` is the proposition assertion. It means: "PR 123 introduced a
 regression." It does not name the model, run, or current probability.
 
-`Certainty` targets `PullRequestRegression/pr-123`, not `PullRequest/pr-123`. Targeting the Thing
+`Certainty` targets `pr-regressions/pr-123`, not `pull-requests/pr-123`. Targeting the Thing
 would only say "some opinion about this pull request" and would not identify the binary proposition
 being judged.
 
@@ -24,15 +27,17 @@ being judged.
 Ordinary sources:
 
 ```text
-Agent/reviewer/static-analysis
-Agent/reviewer/llm-review-v2
-Human/reviewer/alice
+agents/reviewer/static-analysis    shapes: [Agent]
+agents/reviewer/llm-review-v2      shapes: [Agent]
+humans/alice                       shapes: [Person]
 ```
+
+`Agent` and `Person` stand for this repo's own source Shapes.
 
 Oracle source:
 
 ```text
-Oracle/test-runner/regression-suite
+oracles/test-runner/regression-suite    shapes: [Oracle]
 ```
 
 The static analyzer and LLM review are separate because they use different judgment processes. Alice is separate because human review should learn its own track record.
@@ -42,16 +47,16 @@ The static analyzer and LLM review are separate because they use different judgm
 Each ordinary source writes one active `Certainty` about the same proposition assertion:
 
 ```text
-Certainty/pr-123/regression/static-analysis
-Certainty/pr-123/regression/llm-review-v2
-Certainty/pr-123/regression/alice
+certainties/pr-123/regression/static-analysis
+certainties/pr-123/regression/llm-review-v2
+certainties/pr-123/regression/alice
 ```
 
 All have:
 
 ```text
-about = PullRequestRegression/pr-123
-source = Agent/... or Human/...
+data.about = pr-regressions/pr-123
+source = agents/... or humans/...
 data = belief, disbelief, uncertainty, alpha, rationale
 ```
 
@@ -62,7 +67,7 @@ If a source re-runs, revise its existing `Certainty`. Do not add another active 
 Add a repo-owned record for audit data:
 
 ```text
-ReviewRecord/run-2026-06-15/pr-123/llm-review-v2
+review-records/run-2026-06-15/pr-123/llm-review-v2    shapes: [ReviewRecord]
 ```
 
 Fields can include:
@@ -83,9 +88,9 @@ This data does not belong on `Certainty` if the component shape does not define 
 When the regression suite finishes, it writes:
 
 ```text
-Certainty/pr-123/regression/regression-suite
-about = PullRequestRegression/pr-123
-source = Oracle/test-runner/regression-suite
+certainties/pr-123/regression/regression-suite
+data.about = pr-regressions/pr-123
+source = oracles/test-runner/regression-suite
 ```
 
 If the suite passes and the proposition is false, use high disbelief and low uncertainty. If the
@@ -93,7 +98,7 @@ suite result is flaky, keep more uncertainty in the oracle opinion.
 
 ## Consensus Display
 
-Consumers read `Consensus` about `PullRequestRegression/pr-123` and show:
+Consumers read `Consensus` about `pr-regressions/pr-123` and show:
 
 - belief
 - disbelief
@@ -108,8 +113,8 @@ Do not display only "82% likely regression." That hides whether the number is st
 
 This design fails if:
 
-- `Certainty` targets `PullRequest/pr-123` or another Thing instead of the proposition assertion;
-- `PullRequestRegression/pr-123` is recreated per run;
+- `Certainty` targets `pull-requests/pr-123` or another Thing instead of the proposition assertion;
+- `pr-regressions/pr-123` is recreated per run;
 - only one source writes opinions;
 - the oracle writes a separate `TestResult` but no on-target `Certainty`;
 - `alpha` is copied from each source's predicted probability;

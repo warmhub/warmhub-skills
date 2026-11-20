@@ -48,7 +48,7 @@ shapes, subscriptions, credentials, or install state are unknown, use `discover-
 - Subscriptions call a public HTTPS handler that the component author operates. Never imply that
   WarmHub runs a container, a local script, or a cron job. Scheduled work uses an external scheduler
   calling that handler.
-- A handler must be idempotent and treat `repoSeq` as optional. When a delivery credential is bound,
+- A handler must be idempotent and treat `graphSeq` as optional. When a delivery credential is bound,
   verify it against raw body bytes before parsing; make the delivery-auth decision explicit when a
   subscription is unbound. The Webhook and Credentials references define payload, dual-signature,
   retry, fallback, and credential-loss behavior.
@@ -79,12 +79,12 @@ shapes, subscriptions, credentials, or install state are unknown, use `discover-
 ```bash
 wh component validate ./my-component
 wh component register my-component --org acme --manifest ./my-component/warmhub/manifest.json
-wh component install acme/my-component --repo acme/platform
-wh component list --repo acme/platform
-wh component doctor acme/my-component --repo acme/platform
-wh component update acme/my-component --repo acme/platform
-wh component teardown acme/my-component --repo acme/platform
-wh component exec my-component <method> --repo acme/platform
+wh component install acme/my-component --graph acme/platform
+wh component list --graph acme/platform
+wh component doctor acme/my-component --graph acme/platform
+wh component update acme/my-component --graph acme/platform
+wh component teardown acme/my-component --graph acme/platform
+wh component exec my-component <method> --graph acme/platform
 ```
 
 </commands>

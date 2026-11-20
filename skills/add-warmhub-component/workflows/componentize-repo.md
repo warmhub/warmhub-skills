@@ -88,7 +88,7 @@ this step for a seed-only package.
 Make handler code:
 - when a delivery credential is bound, verify it against raw body bytes before JSON parsing
 - when none is bound, preserve and document the intentional unsigned-delivery boundary
-- parse `event`, `repo`, `matchedOperations`, `callback_url`, and optional `repoSeq`
+- parse `event`, `graph`, `matchedOperations`, `callback_url`, and optional `graphSeq`
 - deduplicate by idempotency key or `runId`, and use `callback_url` for accepted async work
 - authenticate back to WarmHub with its deployment token or narrowly scoped runtime token
 
@@ -109,13 +109,13 @@ Run:
 ```bash
 wh component validate ./repo
 wh component register <component-name> --org <component-org> --manifest ./repo/warmhub/manifest.json
-wh component install <component-org>/<component-name> --repo <org>/<repo>
-wh component list --repo <org>/<repo>
-wh component doctor <component-org>/<component-name> --repo <org>/<repo>
-wh component update <component-org>/<component-name> --repo <org>/<repo>
+wh component install <component-org>/<component-name> --graph <org>/<repo>
+wh component list --graph <org>/<repo>
+wh component doctor <component-org>/<component-name> --graph <org>/<repo>
+wh component update <component-org>/<component-name> --graph <org>/<repo>
 ```
 
-If lifecycle commands fail with "component is not installed", re-run `wh component list --repo
+If lifecycle commands fail with "component is not installed", re-run `wh component list --graph
 <org>/<repo>` and pass the registered component ref shown there. Do not pass the reverse-DNS
 manifest id unless that is exactly what the CLI lists.
 

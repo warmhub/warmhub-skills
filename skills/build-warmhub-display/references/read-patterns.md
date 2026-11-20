@@ -1,7 +1,7 @@
 # WarmHub Display Read Patterns
 
 Choose the narrowest read pattern that answers the display. Keep simple one-shot and static builds
-simple; they do not need a projection or saved consumer `repoSeq`.
+simple; they do not need a projection or saved consumer `graphSeq`.
 
 ## SDK And Access Choice
 
@@ -20,8 +20,8 @@ unrestricted repository read authority.
 ## Long-Lived Projections Only
 
 Use incremental reads only when a durable display projection has a real refresh need. Bootstrap with
-`headChanges` or `queryChanges` and `sinceRepoSeq: -1`; apply changes idempotently. Keep the prior
-consumer `repoSeq` while the scan is in progress or fails, and persist the terminal `repoSeq` only
+`headChanges` or `queryChanges` and `sinceGraphSeq: -1`; apply changes idempotently. Keep the prior
+consumer `graphSeq` while the scan is in progress or fails, and persist the terminal `graphSeq` only
 after the scan is exhausted successfully.
 
 Both helpers require unrestricted repository read authority. Use `queryChanges` only when its
@@ -30,7 +30,7 @@ server-side query is accepted and clearly matches the projection. It rejects glo
 unavailable, retain the prior projection and retry after enablement or simplify the query; do not
 downgrade to a full read.
 
-After a successful bootstrap, resume from the saved `repoSeq`. A partial scan may be replayed from
-the old `repoSeq`, so projection writes must tolerate replay. Because the helpers report
+After a successful bootstrap, resume from the saved `graphSeq`. A partial scan may be replayed from
+the old `graphSeq`, so projection writes must tolerate replay. Because the helpers report
 identity-owned changes rather than every dependency or writer effect, periodically reconcile any
 complete local copy against a full read.

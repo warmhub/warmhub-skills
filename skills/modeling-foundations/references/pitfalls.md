@@ -18,9 +18,9 @@ This file is keyed by dimension, not by symptom. If you know which dimension is 
 
 ### Pitfall: Identity-by-Position Instead of Identity-by-Stable-Key
 
-**Symptom.** Things are named `Ticket/2024-Q3-batch-3-row-47` or `Claim/sprint-12-item-6`. Re-ingestion changes the names; references rot.
+**Symptom.** Things are named `tickets/2024-Q3-batch-3-row-47` or `claims/sprint-12-item-6`. Re-ingestion changes the names; references rot.
 
-**Fix.** Use the source system's stable identity in the name (`Ticket/zendesk-118392`, `Claim/arxiv-2401.03192-claim-3`). Position is not identity.
+**Fix.** Use the source system's stable identity in the name (`tickets/zendesk-118392`, `claims/arxiv-2401.03192-claim-3`). Position is not identity.
 
 ---
 
@@ -89,7 +89,7 @@ If you can't make the synthesizer's mechanism match, do not adopt verdicts from 
 
 **Why it matters.** When the goal is preventative rules (lint, AST, CI gate, type constraint), the right unit is the *cluster* — a group of related defects/instances. Static-evaluator scoring of candidate rules against a cluster is microseconds per rule and tens of thousands of rules per dollar. Per-case materialize-and-execute is the *existence-proof anchor* (one rule, validated once at the introducing SHA), not the primary evaluation surface.
 
-**Fix.** Add a clustering shape (`Topic/<id>` or equivalent) that gathers related cases. Add a static-evaluator pipeline that scores candidate rules against the cluster (catch_rate × (1 − fp_rate)). Reserve materialize-and-execute for the winners.
+**Fix.** Add a clustering shape (a `Topic` named `topics/<id>`, or equivalent) that gathers related cases. Add a static-evaluator pipeline that scores candidate rules against the cluster (catch_rate × (1 − fp_rate)). Reserve materialize-and-execute for the winners.
 
 ### Pitfall: Cluster-Unit Pipeline When Single-Object Forensics Are Needed
 
@@ -142,7 +142,7 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 ### Pitfall: Flattening Competing Hypotheses Into One Point Estimate
 
-**Symptom.** A defect could plausibly have been introduced by PR #2266 or PR #2392. The graph picks the highest-confidence candidate and stores `introducedBy: PR/2266` as a flat field. The alternative is mentioned in a comment, then forgotten.
+**Symptom.** A defect could plausibly have been introduced by PR #2266 or PR #2392. The graph picks the highest-confidence candidate and stores `introducedBy: pull-requests/2266` as a flat field. The alternative is mentioned in a comment, then forgotten.
 
 **Why it matters.** When new evidence arrives that contradicts the chosen attribution, there's no shape to update — the alternative was already discarded. Per-method retraction is impossible. The graph quietly converges to overconfidence.
 
@@ -186,13 +186,13 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 **Symptom.** An assertion shape represents a relationship between two or more things, but `about` points at exactly one of the things, with the other endpoint(s) encoded as flat string fields in the assertion's data. Queries from the `about`-side endpoint see the assertion; queries from the other side don't. The relationship is one-sided in the graph.
 
-**The canonical case.** A `DuplicateAssertion` has `about: subjectWref` (one ticket) and `originalWref: string` (the other ticket, as a flat field). Three failures result:
+**The canonical case.** A `DuplicateAssertion` has `data.about: subjectWref` (one ticket) and `originalWref: string` (the other ticket, as a flat field). Three failures result:
 
 - Asymmetric: A is duplicate of B is a different graph node than B is duplicate of A, even though duplication is symmetric.
-- One-sided traversal: `wh thing about TicketProxy/<A>` returns the DuplicateAssertion; `wh thing about TicketProxy/<B>` does not.
+- One-sided traversal: `wh thing about tickets/<A>` returns the DuplicateAssertion; `wh thing about tickets/<B>` does not.
 - `originalWref: string` doesn't participate in `wh thing refs`, doesn't enforce identity validation, isn't version-pinned.
 
-**The canonical fix.** A `Resolution` uses a named Arc collection referenced via `about: "Arc/<name>"` (created by a prior `kind: "collection"` op). Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
+**The canonical fix.** A `Resolution` targets an Arc: a Thing that declares `Arc` in its `shapes`, written first, with the Resolution's `data.about` set to that Thing's name. Both endpoints are queryable via `wh thing about <wref> --resolve-collections`. The single design choice yields four bidirectional queries for free.
 
 **Why it matters operationally.** `about` is **immutable**. The recovery path for a wrong arity is to retract the bad assertions and re-assert with the correct arity. The retracted assertions remain in version history but are hidden from default queries. This is workable when caught early; expensive when discovered after large data load. The four-direction test in `primitives.md` exists to catch this *before* data lands.
 
@@ -204,11 +204,11 @@ Adoption gates extend: not just "did this not damage editorial surface?" but "is
 
 If any fails because of a flat string field where a wref edge should be, you have arity mismatch.
 
-**Fix.** Choose the right collection type per `primitives.md`. In every case, create a named `kind: "collection"` op first, then point the assertion's `about` at the resulting wref — `about` accepts a wref only, never an inline collection object:
-- **Arc** for directional 2-way (A → B differs from B → A): named `arc` collection op, then `about: "Arc/<name>"`.
-- **Bond** for symmetric 2-way: named `bond` collection op, then `about: "Bond/<name>"`.
-- **Set** for symmetric or n-way grouping: named `set` collection op, then `about: "Set/<name>"`.
-- **List** for ordered with possible duplicates: named `list` collection op, then `about: "List/<name>"`.
+**Fix.** Choose the right collection type per `primitives.md`. In every case, first write a named collection Thing that declares the collection Shape in `shapes`, then set the assertion's `data.about` to that Thing's name — `about` accepts a wref only, never an inline collection object. The collection's name does not set its type; its `shapes` does. Give collection Things their own name prefix, separate from the assertions about them, because names are unique across the repository:
+- **Arc** for directional 2-way (A → B differs from B → A): `"shapes": ["Arc"]`, then `data.about: "<name>"`.
+- **Bond** for symmetric 2-way: `"shapes": ["Bond"]`, then `data.about: "<name>"`.
+- **Set** for symmetric or n-way grouping: `"shapes": ["Set"]`, then `data.about: "<name>"`.
+- **List** for ordered with possible duplicates: `"shapes": ["List"]`, then `data.about: "<name>"`.
 
 For a genuine three-way relation, don't reach for a removed `triple` type — recommend a named domain shape or assertion that models the ternary relation directly; for mechanical grouping of three or more things where no directional or ordering semantics are load-bearing, use `set` or `list` instead.
 

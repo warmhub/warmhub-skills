@@ -64,7 +64,7 @@ has no useful partition keys.
 For a large run:
 
 1. export one replayable JSONL per meaningful source partition under a scratch path
-2. submit it with `wh commit submit --repo <org>/<repo> --file <source>.jsonl --stream-id <stable-source-stream> --skip-existing -m "…"`; the CLI creates the transport groups
+2. submit it with `wh commit submit --graph <org>/<repo> --file <source>.jsonl --stream-id <stable-source-stream> --skip-existing -m "…"`; the CLI creates the transport groups
 3. use `--stream` with the same required `--stream-id` and `--skip-existing` only when an immutable producer is the source
 4. persist the source location and digest, JSONL digest, stream id, submission id, and every returned receipt
 
@@ -72,7 +72,7 @@ Pass `--submission-id <uuid>` when the runbook owns recovery identity; otherwise
 the CLI prints. `streamId` is correlation metadata, while the submission id plus chunk ordinal
 derives the receipt lookup identity.
 
-For an ambiguous append, stop the affected write and run `wh commit receipt <event-request-id> --repo <org/repo>`.
+For an ambiguous append, stop the affected write and run `wh commit receipt <event-request-id> --graph <org/repo>`.
 A returned receipt is authoritative. Retry only after an opaque not-found response, and then resend
 the identical submission identity, stream id, message, and ordered operations. `--skip-existing`
 makes deliberate add-only reruns safe; it does not establish that an ambiguous append failed.
@@ -80,7 +80,7 @@ makes deliberate add-only reruns safe; it does not establish that an ambiguous a
 Do not add checkpoints to normal retries. Only when reconciliation, reseeding, export, or
 outcome-unknown recovery evidence needs a portable repository archive, follow
 [repository-checkpoints.md](references/repository-checkpoints.md). It keeps the archive lifecycle,
-authority, integrity check, and separation from per-consumer incremental `repoSeq` and exact write
+authority, integrity check, and separation from per-consumer incremental `graphSeq` and exact write
 receipts explicit.
 
 ## 5. Define The Validation Path

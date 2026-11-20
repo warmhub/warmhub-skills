@@ -2,7 +2,7 @@
 name: connect-warmhub-app
 description: >
   Wire an app, report, or notebook surface to WarmHub data. Use when a display, collector, report,
-  notebook, or app needs Python or TypeScript SDK setup, WARMHUB_API_URL, WARMHUB_REPO,
+  notebook, or app needs Python or TypeScript SDK setup, WARMHUB_API_URL, WARMHUB_GRAPH,
   server-side token handling, a
   one-fact connection probe, sharing-mode decisions, token-safety rules, or source attribution.
   Trigger phrases: "connect this app to WarmHub", "wire WarmHub SDK", "add WarmHub auth",
@@ -75,7 +75,7 @@ Return:
 
 - No token reaches browser code, generated static files, notebook output, prompts, or committed
   source.
-- For apps, `WARMHUB_REPO` and `WARMHUB_API_URL` are config, PATs stay in secrets, and one real read
+- For apps, `WARMHUB_GRAPH` and `WARMHUB_API_URL` are config, PATs stay in secrets, and one real read
   succeeds before surface-specific work continues.
 - An MCP agent uses the global `POST /mcp` endpoint; repository locators stay tool arguments.
 - Human-facing app outputs link back to the WarmHub source unless repo identity is intentionally

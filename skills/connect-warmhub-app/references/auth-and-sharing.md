@@ -27,7 +27,7 @@ the server side and emits only public-safe output.
 - Never commit WarmHub PATs, `.env`, local secret files, Worker secrets, or notebook cells containing
   token values.
 - Keep `WH_TOKEN` server-side or local-only.
-- Keep `WARMHUB_API_URL` and `WARMHUB_REPO` as non-secret config.
+- Keep `WARMHUB_API_URL` and `WARMHUB_GRAPH` as non-secret config.
 - Prefer the narrowest useful token scope, such as repo read for displays and explicit write scope
   only for collectors or handlers that submit data.
 - Separate service credentials from browser-exposed variables.

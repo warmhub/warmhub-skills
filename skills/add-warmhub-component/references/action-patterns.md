@@ -45,13 +45,13 @@ expect:
 | `event` | `warmhub.write` or `warmhub.retract` |
 | `runId`, `traceId`, `subscriptionName` | Delivery/run correlation |
 | `callback_url` | Report asynchronous `processing`, `success`, `failure`, or `retry_requested` |
-| `repo` | The subscription's home repo |
-| `originRepoName` | Present for a cross-repo source |
+| `graph` | The subscription's home repo, `{ orgName, graphName }` |
+| `originGraphName` | Present for a cross-repo source |
 | `matchedOperationIndexes`, `matchedOperations` | Matching operation context |
-| `repoSeq` | Optional non-negative commit sequence; absent for cron and metadata events. For a cross-repo subscription it belongs to the source repo, not `repo`. |
+| `graphSeq` | Optional non-negative commit sequence; absent for cron and metadata events. For a cross-repo subscription it belongs to the source repo, not `graph`. |
 
 Metadata events use `event: "warmhub.<eventType>"` and `data`, not matched operations. Do not make
-`repoSeq` required or substitute a fake zero.
+`graphSeq` required or substitute a fake zero.
 
 The platform supplies `X-WarmHub-Idempotency-Key`, `X-WarmHub-Run-Id`, and `X-WarmHub-Attempt`.
 Deduplicate irreversible work with the idempotency key or `runId`; retries may invoke the handler
@@ -74,5 +74,5 @@ original webhook. Retry-exhausted deliveries notify at terminal completion, befo
 notification; error-code-classified failures with a configured fallback defer notification until the
 fallback settles. Suppressed authority-revoked deliveries do not retry, fallback, or notify.
 
-Use `wh sub log <name>`, `wh sub attempts <runId>`, and `wh notifications --repo <org>/<repo>` to
+Use `wh sub log <name>`, `wh sub attempts <runId>`, and `wh notifications --graph <org>/<repo>` to
 inspect those outcomes.

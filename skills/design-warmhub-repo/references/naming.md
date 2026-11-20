@@ -10,14 +10,17 @@ audiences use to navigate the graph at all:
   like a hash dump. The difference is whether a person can find their way without
   a side lookup.
 - **Humans and agents query by name prefix.** A coherent `/`-delimited hierarchy
-  turns the name space into a queryable index. `QualityFinding/<org>/<repo>/pull/142/*`
+  turns the name space into a queryable index. `findings/<org>/<repo>/pull/142/*`
   returns every finding on one PR with a glob, no field scan. The hierarchy you
   design *is* the query surface you (and every future agent) get for free.
 
-Getting this right is cheap at design time and expensive to retrofit — `about` is
-immutable, and a thing's name is its identity, so a rename is a retract-and-replay
-migration (see [migrations.md](../../build-warmhub-repo/references/migrations.md)), not an edit. Treat naming as a
-first-class design activity, not a formatting pass.
+Getting this right is cheap at design time and expensive to retrofit. A Thing can be
+renamed with `wh thing rename <name> <newName>`. Stored references (`about` and wref
+fields) hold durable ids, so they keep working after a rename. The old name stops
+resolving, though: wref text kept outside the graph, such as docs, configs and other
+repos, breaks, and a producer that still computes the old deterministic name will mint
+a second Thing instead of updating the first. Choose stable names before others depend
+on them. Treat naming as a first-class design activity, not a formatting pass.
 
 The principles below are distilled from production WarmHub naming schemes. The
 running example is a **code-review quality graph**: two producers — a PR-review lane
@@ -32,11 +35,11 @@ A name encodes *what the thing is*, never *where it came from* or *what state it
 in*. Provenance (source, loader, harness), certainty, status, queue rank, and any
 other mutable or contextual fact belong in assertion data, not in the name.
 
-- **Good.** `QualityFinding/<org>/<repo>/pull/142/c-9a1208` — repo, scope, PR, stable
+- **Good.** `findings/<org>/<repo>/pull/142/c-9a1208` — repo, scope, PR, stable
   comment id. Two different harnesses that observe the same finding name the *same*
   node; the harness is recorded as a field on the observation assertion.
-- **Avoid.** `QualityFinding/nightly-import-142-…`, `Claim/needs-support`,
-  `ReviewTarget/rank-1`. The loader tag, the review status, and the queue rank are
+- **Avoid.** `findings/nightly-import-142-…`, `claims/needs-support`,
+  `review-targets/rank-1`. The loader tag, the review status, and the queue rank are
   all data — baking them into the name forks identity and rots the moment state
   changes.
 
@@ -51,10 +54,22 @@ collapses to a safe character. Design the segment order from most-stable/broades
 most-specific so that every prefix is a meaningful set:
 
 ```
-QualityFinding / <org>/<repo> / pull/<n> / <commentId>
-   shape           scope          sub-scope   leaf identity
+findings / <org>/<repo> / pull/<n> / <commentId>
+  kind       scope          sub-scope   leaf identity
 ```
 
+- The first segment names the **kind of record**, as a lowercase plural (`findings/`,
+  `test-cases/`, `policies/`). It is a naming convention only. It does not select a
+  Shape: each write states its Shapes in `shapes`, so the Thing
+  `findings/<org>/<repo>/pull/142/c-9a1208` is a `QualityFinding` because its write
+  says `"shapes": ["QualityFinding"]`. Queries filter on Shape with `--shape`,
+  separately from the name.
+- **Names are unique across the repository, whatever the Shape.** Give each kind its
+  own prefix. A finding and an observation of it cannot share a name; `findings/...`
+  and `finding-observations/...` keep them apart.
+- Do not start a name with a Shape name (`QualityFinding/...`). It reads as if it set
+  the Shape, and it does not. Shapes are Things named `hub/shapes/<Name>`, the `hub/`
+  prefix is reserved for them, and a bare wref always names a Thing, never a Shape.
 - Org and repo are **separate segments**, not a fused string — so you can glob one
   org across repos, or one repo across PRs.
 - Scope segments are drawn from a small fixed vocabulary that reflects the real
@@ -122,8 +137,8 @@ content hash as a **`/` name segment** — not with `@`, which is reserved for w
 version pins and is rejected inside a thing-name segment:
 
 ```
-QualityPolicy/standard-gate/sha256-old
-QualityPolicy/standard-gate/sha256-new
+policies/standard-gate/sha256-old
+policies/standard-gate/sha256-new
 ```
 
 Old assertions made under `sha256-old` remain valid history, and a reader can tell at
@@ -139,36 +154,38 @@ policy change retracts against.
 One naming authority, two lanes, one identity per entity. Note how scope vocabulary
 (`pull/` vs `scan/`) partitions the space and how the leaf differs by semantics
 (unique comment id for review, content hash for scans). `<org>/<repo>` is a
-placeholder — substitute your own:
+placeholder — substitute your own. Each kind has its own prefix; the comment after
+each name is the Shape its write declares in `shapes`:
 
 ```
 # shared identity (lane-independent)
-Repository/github/<org>/<repo>
-SourceModule/<org>/<repo>/web/src/cart.ts          ← canonical, one node
-TestCase/<org>/<repo>/web/src/cart.test.ts/handles-empty-cart
+repositories/github/<org>/<repo>                                     # Repository
+modules/<org>/<repo>/web/src/cart.ts                                 # SourceModule ← canonical, one node
+test-cases/<org>/<repo>/web/src/cart.test.ts/handles-empty-cart      # TestCase
 
 # review lane — PR-scoped, leaf = unique comment id
-AgentRun/<org>/<repo>/pull/142/review/<run>
-QualityFinding/<org>/<repo>/pull/142/c-9a1208
-QualityFindingObservation/<org>/<repo>/pull/142/c-9a1208/<run>
-FindingDisposition/<org>/<repo>/pull/142/c-9a1208/<run>/accepted
+agent-runs/<org>/<repo>/pull/142/review/<run>                        # AgentRun
+findings/<org>/<repo>/pull/142/c-9a1208                              # QualityFinding
+finding-observations/<org>/<repo>/pull/142/c-9a1208/<run>            # QualityFindingObservation
+finding-dispositions/<org>/<repo>/pull/142/c-9a1208/<run>/accepted   # FindingDisposition
 
 # scan lane — repo-scoped, leaf = content hash (recurrence derived)
-AgentRun/<org>/<repo>/scan/lint/<run>
-QualityFinding/<org>/<repo>/scan/<contentHash>
-QualityFindingObservation/<org>/<repo>/scan/<contentHash>/<run>
+agent-runs/<org>/<repo>/scan/lint/<run>                              # AgentRun
+findings/<org>/<repo>/scan/<contentHash>                             # QualityFinding
+finding-observations/<org>/<repo>/scan/<contentHash>/<run>           # QualityFindingObservation
 
 # content-addressed boundary — hash as a /-segment, not @
-QualityPolicy/standard-gate/sha256-…
+policies/standard-gate/sha256-…                                      # QualityPolicy
 ```
 
 What this buys, concretely:
 
 | Query intent | Glob / traversal it unlocks |
 |---|---|
-| All findings on PR 142 | `QualityFinding/<org>/<repo>/pull/142/*` |
-| Every observation of one finding across runs | `…/pull/142/c-9a1208/*` |
-| All scan findings in a repo | `QualityFinding/<org>/<repo>/scan/*` |
+| All findings on PR 142 | `findings/<org>/<repo>/pull/142/*` |
+| Every observation of one finding across runs | `finding-observations/<org>/<repo>/pull/142/c-9a1208/*` |
+| All scan findings in a repo | `findings/<org>/<repo>/scan/*` |
+| Every `QualityFinding`, wherever its name sits | `wh thing list --shape QualityFinding` |
 | Verdicts issued under a stale policy | filter names ending `/sha256-old` |
 | Did this scan defect recur? | same `<contentHash>` ⇒ same node; no stored flag |
 
@@ -183,6 +200,9 @@ Run this before adoption (it overlaps Gate 4 in [checkpoint.md](checkpoint.md)):
       compute the same name.
 - [ ] **Hierarchical and prefix-meaningful.** `/`-delimited; org and repo are
       separate segments; every segment boundary is one a query would filter on.
+- [ ] **One prefix per kind.** Each kind of record has its own lowercase plural
+      prefix, so names of different Shapes never collide (names are unique across
+      the repository). No name starts with a Shape name; Shapes come from `shapes`.
 - [ ] **Stable scope vocabulary.** Scope segments (`pull/`, `scan/`, source-kind)
       come from a small fixed set a reader can learn once and predict.
 - [ ] **One authority.** Names are built in one place (a shared naming function or a

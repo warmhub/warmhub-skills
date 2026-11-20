@@ -84,7 +84,7 @@ What's the marginal value over a flat ledger?>
 
 - **Question.** Plain language. The audience is a designer or stakeholder, not an MCP. "Which claims have weak certainty and high centrality?" beats "Filter ReviewedClaim by CertaintyOpinion.belief < 0.3 join refs count > N."
 - **Status.** Updates over time. A query goes from `[F]` to `[M]` when the missing shape lands, then to `[R]` when fixture/data lands.
-- **Traversal sketch.** Use `wh` MCP/CLI vocabulary (`thing about`, `thing refs`, `thing query`, `thing graph`). The sketch shows the shape of the answer, not the implementation. Multi-step traversals are an arrow chain.
+- **Traversal sketch.** Use `wh` MCP/CLI vocabulary (`thing about`, `thing refs`, `thing query`, `thing view --depth N`). The sketch shows the shape of the answer, not the implementation. Multi-step traversals are an arrow chain.
 - **Earns pressure for.** The most important line. Every shape, field, or assertion family this query justifies. If the line is empty, the query is already answerable — note that explicitly.
 - **Optional commentary.** What does this query unlock that text search or a flat dashboard couldn't do? If the answer is "nothing," the query may not earn its place.
 
@@ -147,8 +147,8 @@ Status: `[R]`
 
 Traversal sketch:
 
-    thing refs ExternalSourceReference/arxiv/2602.00307v1
-    thing refs GitFileRevision/<commit>/<path>
+    wh thing refs papers/arxiv-2602.00307v1 --inbound
+    wh thing refs code-revisions/<commit>/<path> --inbound
       -> ReviewedClaim, WikiArtifactRevision, SummaryProxy, SynthesisProxy
 
 Earns pressure for: first-class source proxy things and uniform reference fields.

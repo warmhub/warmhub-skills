@@ -14,7 +14,7 @@ Use uncertainty mass to express weak priors:
 - Previously strong source, limited comparable evidence: `(0.7, 0, 0.3)`
 - Known noisy source that should still be learnable: `(0.35, 0.15, 0.5)`
 
-Avoid `(1, 0, 0)` for ordinary sources. If a source must be unlearnable max trust, model it as an `Oracle/*` source.
+Avoid `(1, 0, 0)` for ordinary sources. If a source must be unlearnable max trust, model it as a source whose Shapes include `Oracle` (it declares `Oracle` or a Shape that composes it).
 
 ## Discount Semantics
 
@@ -49,8 +49,8 @@ After launch:
 wh veritas --help
 wh veritas list-reputations --help
 
-wh veritas list-reputations --repo <org>/<repo>
-wh veritas get-reputation --wref Agent/006 --scope MoleHypothesis --repo <org>/<repo>
+wh veritas list-reputations --graph <org>/<repo>
+wh veritas get-reputation --wref agents/006 --scope MoleHypothesis --graph <org>/<repo>
 ```
 
 If reputations never move, check whether outcomes are being written as `Certainty` on the same

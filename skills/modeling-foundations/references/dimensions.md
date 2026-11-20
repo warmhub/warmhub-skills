@@ -77,7 +77,7 @@ Three dimensions (D5, D7, D8) carry an explicit sub-axis because audits revealed
 
 - **Ephemeral role label.** Reviewer is a string field on a review event, no graph identity.
 - **Single-session attributed.** Reviewer is a wref-typed actor, queryable within its session, but doesn't accumulate across sessions.
-- **Durable typed Thing with track record.** Reviewer is a first-class graph Thing (e.g. `Persona/<id>`, `Actor/<harness>-<model>`), with cross-session attribution, scorecards, and effectiveness metrics. Membership in a council is its own assertion (e.g. `Seat/<council>/<persona>`).
+- **Durable typed Thing with track record.** Reviewer is a first-class graph Thing (e.g. `personas/<id>`, `actors/<harness>-<model>`), with cross-session attribution, scorecards, and effectiveness metrics. Membership in a council is its own assertion (e.g. `seats/<council>/<persona>`).
 
 **Why it matters.** Single-author review fits a `ReviewEvent` shape (one event, one reviewer, one target). Multi-actor adversarial review needs `Critique` as an authored, multi-target assertion. Persistent persona models need a separate Persona/Seat/scorecard layer that ephemeral roles don't. Conflating the three flattens the audit trail.
 

@@ -34,7 +34,7 @@ Don't reach for assertions just to track change over time — things are version
 
 ### 2. Sketch the manifest
 
-For each thing or assertion, write a one-line description and 3–8 fields. Don't worry about completeness — get the nouns down. Naming convention: `<Shape>/<stable-id>`, hierarchical when natural (`<Shape>/<batch>/<target-id>`), no mutable state in names.
+For each thing or assertion, write a one-line description and 3–8 fields. Don't worry about completeness — get the nouns down. Naming convention: `<kind>/<stable-id>`, where `<kind>` is a lowercase plural prefix for one kind of record (`tickets/<stable-id>`), hierarchical when natural (`<kind>/<batch>/<target-id>`), no mutable state in names. The prefix does not set the Shape; each write states its Shapes in `shapes`. Names are unique across the repository, so give each kind its own prefix.
 
 Read [primitives.md](../../modeling-foundations/references/primitives.md) before going further. The traversability contract — and especially the rule about `about` being immutable — affects every arity decision you're about to make.
 
@@ -47,7 +47,7 @@ For each assertion shape, walk the four-direction test from primitives.md:
 3. **Aggregation.** Can `wh assertion list --shape <Foo>` find all assertions of this kind?
 4. **Derived rollups.** Do multi-hop questions ("vents addressed by any workaround") fall out as graph walks?
 
-If a relationship is between two things, the answer is almost never `about: <single-thing>` with the second endpoint as a flat string field. That's a classic single-thing-arity failure. The right answer is one of:
+If a relationship is between two things, the answer is almost never `data.about: <single-thing>` with the second endpoint as a flat string field. That's a classic single-thing-arity failure. The right answer is one of:
 
 - **Arc** for directional 2-way relationships ("A blocks B" — A and B are different roles).
 - **Bond** for symmetric 2-way relationships ("A and B are duplicates of each other" — order doesn't matter).

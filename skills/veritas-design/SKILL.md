@@ -75,22 +75,26 @@ uncertainty about that proposition assertion.
 
 Good proposition design:
 
-- `MatchHomeWin/match-123` — assertion about `Match/match-123`
-- `PullRequestRegression/pr-456` — assertion about `PullRequest/pr-456`
-- `IncidentRootCause/case-789/cache-invalidation` — assertion about `Incident/case-789`
+- `home-wins/match-123` — a `MatchHomeWin` assertion about `matches/match-123`
+- `pr-regressions/pr-456` — a `PullRequestRegression` assertion about `pull-requests/pr-456`
+- `root-causes/case-789/cache-invalidation` — an `IncidentRootCause` assertion about `incidents/case-789`
 
 Bad proposition design:
 
-- `Match/match-123` — a Thing target, not a proposition assertion
-- `Claim/pr-456/regression-present` — ambiguous or wrong when `Claim` is modeled as a Thing
-- `PullRequestRegression/run-2026-06-15/pr-456` — run-keyed proposition identity
-- `PullRequestRegression/pr-456/model-a-prediction` — source-keyed proposition identity
-- `PullRequestRegression/pr-456/confidence-0.82` — probability encoded in the target name
+- `matches/match-123` — a Thing target, not a proposition assertion
+- `claims/pr-456/regression-present` — a generic prefix that does not name the question family, and wrong if it names a Thing rather than a proposition assertion
+- `pr-regressions/run-2026-06-15/pr-456` — run-keyed proposition identity
+- `pr-regressions/pr-456/model-a-prediction` — source-keyed proposition identity
+- `pr-regressions/pr-456/confidence-0.82` — probability encoded in the target name
 
 Rules:
 
 - Model a repo-owned proposition assertion shape for each question family.
 - Name the proposition assertion by what is being judged, not who judged it or when.
+- Give each question family its own name prefix, separate from its subject's prefix. Names are
+  unique across the repository, so `pull-requests/pr-456` and its proposition cannot share one
+  name; use `pull-requests/pr-456` and `pr-regressions/pr-456`. The prefix does not set
+  the Shape: the proposition's write declares its Shape, such as `PullRequestRegression`, in `shapes`.
 - Keep one binary outcome per target assertion. Split multi-class questions into separate binary propositions when needed.
 - Keep snapshot, run, evidence, and model data on repo-owned record shapes.
 - If the proposition assertion name changes on every run, opinions will not meet, and Veritas will
@@ -104,14 +108,18 @@ Use one source Thing per independent judgment process. Reputation attaches to th
 
 Good source identities:
 
-- `Agent/reviewer/gpt-5/verdict-v2`
-- `Pipeline/static-analyzer/biome-rules`
-- `Human/alice`
-- `Oracle/test-runner/unit-suite`
+- `agents/reviewer/gpt-5/verdict-v2`
+- `pipelines/static-analyzer/biome-rules`
+- `humans/alice`
+- `oracles/test-runner/unit-suite`
+
+The prefixes are a naming convention. Each source Thing declares its Shape in `shapes`, and an
+oracle is an oracle because its Shapes include `Oracle` (it declares `Oracle` or a Shape that
+composes it), not because of its name.
 
 Avoid:
 
-- One `Agent/codex` source for unrelated review, prediction, summarization, and adjudication workflows.
+- One `agents/codex` source for unrelated review, prediction, summarization, and adjudication workflows.
 - Per-run source names that never accumulate track record.
 - Reusing one source wref after the underlying process changes meaningfully.
 
@@ -136,16 +144,16 @@ wh veritas list-reputations --help
 wh veritas get-reputation --help
 wh veritas upsert-reputation --help
 
-wh veritas list-reputations --repo <org>/<repo>
-wh veritas get-reputation --wref Agent/006 --scope MoleHypothesis --repo <org>/<repo>
-wh veritas upsert-reputation --wref Agent/006 --scope MoleHypothesis --belief 0.7 --disbelief 0.1 --uncertainty 0.2 --repo <org>/<repo>
+wh veritas list-reputations --graph <org>/<repo>
+wh veritas get-reputation --wref agents/006 --scope MoleHypothesis --graph <org>/<repo>
+wh veritas upsert-reputation --wref agents/006 --scope MoleHypothesis --belief 0.7 --disbelief 0.1 --uncertainty 0.2 --graph <org>/<repo>
 ```
 
 ## Oracle Topology
 
 Read [references/oracle-patterns.md](references/oracle-patterns.md) when ground truth, adjudication, or verification is available.
 
-Use `Oracle/*` sources for ground truth that should not be reputation-discounted:
+Use sources whose Shapes include `Oracle` (it declares `Oracle` or a Shape that composes it) (named here under `oracles/`) for ground truth that should not be reputation-discounted:
 
 - deterministic test runner
 - benchmark adjudicator
@@ -184,17 +192,17 @@ Use this shape of workflow, adapting names to the repo:
 
 ```text
 Install Veritas once.
-Ensure source Things exist: Agent/model-a, Agent/model-b, Oracle/ground-truth.
+Ensure source Things exist: agents/model-a, agents/model-b, oracles/ground-truth (shapes: [Oracle]).
 
 For each stable binary proposition:
-  ensure PullRequestRegression/pr-456 exists as an assertion about PullRequest/pr-456
+  ensure pr-regressions/pr-456 exists as a PullRequestRegression assertion about pull-requests/pr-456
   for each source opinion:
-    add or revise Certainty/<proposition>/<source> about PullRequestRegression/pr-456
-    add repo-owned PredictionRecord/<run>/<proposition>/<source> with evidence and frozen output
+    add or revise certainties/<proposition>/<source> (a Certainty) about pr-regressions/pr-456
+    add repo-owned prediction-records/<run>/<proposition>/<source> (a PredictionRecord) with evidence and frozen output
 
 When ground truth arrives:
-  add or revise Certainty/<proposition>/ground-truth about the same proposition assertion
-  source = Oracle/ground-truth
+  add or revise certainties/<proposition>/ground-truth about the same proposition assertion
+  source = oracles/ground-truth
 
 Read Consensus about the proposition assertion and render BDU.
 ```
@@ -223,7 +231,7 @@ If any item is true, the design is probably an echo rather than consensus:
 
 After Veritas design is complete, choose the next concrete move:
 
-- **Install component** - use `wh component install warmhub/veritas --repo <org>/<repo>` after the repo model is approved.
+- **Install component** - use `wh component install warmhub/veritas --graph <org>/<repo>` after the repo model is approved.
 - **Plan ingestion** - define the write loop that creates and revises `Certainty` plus repo-owned provenance records.
 - **Build display** - render BDU and explain source/oracle status without flattening uncertainty.
 - **Revise repo model** - if propositions are not binary or sources are not independent, rerun `design-warmhub-repo`.

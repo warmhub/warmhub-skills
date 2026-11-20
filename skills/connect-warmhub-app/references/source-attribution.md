@@ -14,7 +14,7 @@ Prefer a canonical repo URL discovered from WarmHub metadata, docs, or app confi
 is available, use:
 
 ```text
-https://app.warmhub.ai/orgs/<url-encoded-org>/repos/<url-encoded-repo>
+https://app.warmhub.ai/orgs/<url-encoded-org>/graphs/<url-encoded-repo>
 ```
 
 For private repos, the link may lead to a sign-in or permission gate. That is acceptable when the repo
@@ -25,7 +25,7 @@ name is safe to disclose. Ask before linking if the repo identity itself may be 
 - Put the link in a shared layout, header, footer, or report metadata block so every page or exported
   report includes it.
 - Use product-facing text such as "Source data on WarmHub" or "View WarmHub repo".
-- Include the `org/repo` label when it helps users understand provenance and the repo name is safe to
+- Include the `org/graph` label when it helps users understand provenance and the repo name is safe to
   show.
 - Keep attribution separate from implementation or security assurances. Do not write token-handling
   notes into page chrome.

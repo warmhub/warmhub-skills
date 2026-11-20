@@ -42,13 +42,12 @@ For each family, write down the stable identity components. The components shoul
 
 ### 2. Define the proxy shapes
 
-For each source family, define a thing-shape (not assertion-shape) whose identity captures the stable key:
+For each source family, define a thing-shape (not assertion-shape) whose name captures the stable key. Give each family its own name prefix; the prefix does not set the Shape, so each write also states the Shape in `shapes`:
 
-- `ExternalSourceReference/arxiv/<id>` for arXiv papers.
-- `GitFileRevision/<commit>/<path>` for code at a specific revision.
-- `TicketProxy/<system>/<project>/<number>` and `PullRequestProxy/<system>/<project>/<number>` for repository-hosted work items.
-- `ServiceProxy/<cluster>/<ns>/<name>` for services.
-- `TicketProxy/<system>/<id>` for tickets.
+- `ExternalSourceReference` Things named `papers/arxiv-<id>` for arXiv papers (one depth for every paper: `papers/<source-kind>-<id>`). Keep `sources/` for source systems, as the ontology docs do.
+- `GitFileRevision` Things named `code-revisions/<commit>/<path>` for code at a specific revision.
+- `TicketProxy` Things named `tickets/<system>/<project>/<number>` and `PullRequestProxy` Things named `pull-requests/<system>/<project>/<number>` for work items. Use this one depth for every ticket. If a system has no project, or its ticket ids are unique across the whole system, still fill the `<project>` segment with one fixed value for that system (for example the workspace or instance name), so every ticket name has the same depth and `tickets/<system>/*/*` selects them all.
+- `ServiceProxy` Things named `services/<cluster>/<ns>/<name>` for services.
 
 These are **things**, not assertions — they have a single canonical state (the source's identity). They're *also* never the authoritative store for the source bytes; if you find yourself adding fields like `body: string` for a ticket's full text, pause and ask whether that body is authoritatively yours (it's not).
 

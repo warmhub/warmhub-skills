@@ -77,7 +77,7 @@ preview to surface shape and operation errors; re-check real-write results becau
 changes and write admission can still differ.
 
 When a JSONL append response is ambiguous, stop the affected flush and look up its exact
-`eventRequestId` with `wh commit receipt <event-request-id> --repo <org/repo>`. A receipt is the
+`eventRequestId` with `wh commit receipt <event-request-id> --graph <org/repo>`. A receipt is the
 outcome. Only opaque receipt-not-found permits a retry, which must preserve the original
 submission id, stream id, message, and operation order. `--skip-existing` is for intentional
 add-only reruns, not proof that an ambiguous append missed.

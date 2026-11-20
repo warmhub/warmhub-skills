@@ -47,7 +47,7 @@ Each v1 thing's full cascade — write v2 + cascade-rewrites, then retract v1 + 
 
 Discipline that follows from this:
 
-- **Preflight the complete bounded array with the server evaluator before submitting.** Write the planned ops to `group.json` and run `wh commit submit --repo <repo> --file group.json --dry-run -m "Migrate …"`; or use `client.commit.validate(...)`. It returns ordered server validation results without persisting state, receipts, or a reservation. Inspect every result, then submit the same group. Split a group before preflight if it exceeds 10,000 operations or 4 MiB.
+- **Preflight the complete bounded array with the server evaluator before submitting.** Write the planned ops to `group.json` and run `wh commit submit --graph <repo> --file group.json --dry-run -m "Migrate …"`; or use `client.commit.validate(...)`. It returns ordered server validation results without persisting state, receipts, or a reservation. Inspect every result, then submit the same group. Split a group before preflight if it exceeds 10,000 operations or 4 MiB.
 - **Verify post-commit state explicitly.** After `wh commit submit`, query `wh thing view <v2-wref>` and `wh assertion view <v1-wref>` to confirm the v2 thing exists and the v1 was retracted. Don't infer from the exit code.
 - **Make the migration script idempotent at the thing level**, so a partial-apply on one thing can be re-run safely. Deterministic v2 names (Move 1) make this work — a second run sees the v2 exists, skips the write, and retries any retraction that didn't land.
 
@@ -56,7 +56,7 @@ Discipline that follows from this:
 For each v1 assertion you retract, enumerate every assertion whose `about` targets it:
 
 ```bash
-wh assertion list --about <v1-wref> --repo <repo>
+wh assertion list --about <v1-wref> --graph <repo>
 ```
 
 For each dependent, **its own `about` is immutable too** — so it can't be re-targeted at the v2 assertion. Each must be:

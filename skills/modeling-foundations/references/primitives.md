@@ -35,7 +35,7 @@ Forward resolution is *not* the problem: an `about` target (or a wref field) may
 The design consequence:
 
 - **Same-repo relationship** → reverse via `wh thing about <endpoint> --resolve-collections` is fine; an `about`-Arc or `about`-Bond gives you both directions for free.
-- **Cross-repo relationship** → do **not** rely on reverse `about`. You will see it return `0`, and the four-direction test as a naive checklist will tell you the relationship "isn't traversable" — a false negative that pushes designers to contort the schema (downgrading an `Arc` to single-`about` plus a denormalized string, or simulating the link with an extra assertion + a reactor). The correct construction is a **typed wref field** on the consumer-side thing/assertion, with the object side verified by `wh thing refs --inbound <target>`. This is exactly [`pattern-catalog.md` § 12 — Cross-Repo Substrate-Split](../../design-warmhub-repo/references/pattern-catalog.md); the full design checklist and the lifecycle/orphan prompts a cross-repo link must answer are in [`cross-repo-linkage.md`](cross-repo-linkage.md). (Caveat: `wh thing graph` does not currently walk inbound wref-edges, so don't use `graph` for reverse cross-repo discovery — use `refs --inbound`.)
+- **Cross-repo relationship** → do **not** rely on reverse `about`. You will see it return `0`, and the four-direction test as a naive checklist will tell you the relationship "isn't traversable" — a false negative that pushes designers to contort the schema (downgrading an `Arc` to single-`about` plus a denormalized string, or simulating the link with an extra assertion + a reactor). The correct construction is a **typed wref field** on the consumer-side thing/assertion, with the object side verified by `wh thing refs --inbound <target>`. This is exactly [`pattern-catalog.md` § 12 — Cross-Repo Substrate-Split](../../design-warmhub-repo/references/pattern-catalog.md); the full design checklist and the lifecycle/orphan prompts a cross-repo link must answer are in [`cross-repo-linkage.md`](cross-repo-linkage.md). (Caveat: `wh thing view --depth N` does not currently walk inbound wref-edges, so don't use expansion for reverse cross-repo discovery — use `refs --inbound`.)
 
 This scope-split is *current platform behavior*, not a permanent law — which is exactly why it must be **verified, not assumed**. If your platform version might differ, run the 60-second two-repo probe in [`design-rules.md` § Verify Platform Mechanisms Before Encoding](design-rules.md) and let the observed result, not a remembered constraint, drive the `about`-Arc/Bond-vs-typed-wref-field choice.
 
@@ -55,16 +55,17 @@ Resolution  ──about──▶  Arc[Vent, ResolutionTarget]
 | All unresolved vents about a FrictionTarget | `thing about Z --shape Vent` ⊖ vents in any Resolution Arc | ✓ derived |
 | All vents addressed by any fix on FrictionTarget Z | walk Z → Vent → Resolution → ResolutionTarget | ✓ 3-hop traversal |
 
-A single design choice — a named Arc collection created by a prior op, then `about: "<arc-name>"` — yields all four queries for free.
+A single design choice — a named Thing that declares `Arc`, written first, then `data.about: "<arc-name>"` — yields all four queries for free.
 
 ### Worked example: a duplicate-ticket graph's DuplicateAssertion (fails)
 
 ```ts
 {
-  kind: "assertion",
-  name: "DuplicateAssertion/dup-X",
-  about: subjectWref,           // ← about ONE ticket
+  operation: "add",
+  name: "duplicates/dup-X",
+  shapes: ["DuplicateAssertion"],
   data: {
+    about: subjectWref,         // ← about ONE ticket
     originalWref: originalWref, // ← the OTHER ticket is a flat field
     reason: reason,
   },
@@ -209,8 +210,8 @@ WarmHub's public collection forms are auto-created on first use, version-pinned,
 
 Ask whether reversing the two endpoints changes the relationship.
 
-- **Arc:** `Service/A blocks Service/B` has `from: Service/A` and `to: Service/B`; reversing it says that B blocks A, which is a different fact.
-- **Bond:** `Ticket/123 duplicates Ticket/456` has two `ends`; reversing the input names the same duplicate relationship, not a second fact.
+- **Arc:** `services/a blocks services/b` has `from: services/a` and `to: services/b`; reversing it says that B blocks A, which is a different fact.
+- **Bond:** `tickets/123 duplicates tickets/456` has two `ends`; reversing the input names the same duplicate relationship, not a second fact.
 
 Never use input order as a direction on a Bond: its ends are canonicalized. Use Arc whenever each endpoint has a distinct semantic role.
 
@@ -222,7 +223,7 @@ For a genuine three-way relation, don't reach for a collection at all — model 
 
 ### Inline syntax
 
-`about` accepts a **wref string only.** There is no inline tagged-object sugar (`{ arc: [...] }`, `{ bond: [...] }`, `{ set: [...] }`, `{ list: [...] }`) — the write pipeline rejects it. To assert about a collection, create the named collection first with its own `add` operation, then point `about` at the resulting wref:
+`about` accepts a **wref string only.** There is no inline tagged-object sugar (`{ arc: [...] }`, `{ bond: [...] }`, `{ set: [...] }`, `{ list: [...] }`) — the write pipeline rejects it. To assert about a collection, create the named collection first with its own `add` operation, then set `data.about` to its name:
 
 ```bash
 wh commit submit --ops '[
@@ -232,14 +233,14 @@ wh commit submit --ops '[
 ```
 
 ```js
-about: "A"                        // single thing
-about: "vent-resolution-x"        // an Arc: directed binary relationship
-about: "duplicate-a-b"            // a Bond: symmetric binary relationship
-about: "cell-adjacency-0-0-0-1"   // a Set, created by a prior collection op
-about: "cell-path-a"              // a List, created by a prior collection op
+data: { about: "A" }                        // single thing
+data: { about: "vent-resolution-x" }        // an Arc: directed binary relationship
+data: { about: "duplicate-a-b" }            // a Bond: symmetric binary relationship
+data: { about: "cell-adjacency-0-0-0-1" }   // a Set, written by a prior add
+data: { about: "cell-path-a" }              // a List, written by a prior add
 ```
 
-Valid collection `type` values on the `add`/`kind: "collection"` op are `set` and `list`; write `arc` and `bond` as ordinary Things, and `pair` is retired for writes. Collection names must not contain `+`; use a readable slug instead.
+Every collection is a Thing that declares `Arc`, `Bond`, `Set` or `List` in `shapes`, written with an ordinary `add` operation (`wh collection create --type set` writes the same kind of Thing). The Shape, not the name, makes it a collection. `Pair` is retired for writes. Collection names must not contain `+`; use a readable slug instead.
 
 ### Querying through collections
 
@@ -260,9 +261,9 @@ This is the critical operational caveat: a graph can be designed correctly with 
 Collections are things, so they can be members of other collections:
 
 ```js
-// Arc/location-ab and Arc/location-cd are themselves named collections
-// created by prior ops; the outer Arc collection is created from those two wrefs
-about: "Arc/<outer-name>"   // an Arc whose endpoints are collection wrefs
+// location-ab and location-cd are Things that declare Arc, written by prior ops;
+// the outer Arc is a Thing that declares Arc with those two names as from and to
+data: { about: "<outer-name>" }   // an Arc whose endpoints are collection wrefs
 ```
 
 Useful for hierarchical or nested relationships, but pay the readability cost — multi-level composition can be hard to follow without good descriptions.
@@ -274,16 +275,22 @@ Useful for hierarchical or nested relationships, but pay the readability cost �
 When `about` is an Arc / Bond / Set / List, context-free readers traversing the graph need help understanding what the assertion is *about* without resolving the collection's members. Mirror the practical traversal fields onto the assertion:
 
 ```js
-// Native traversal target — named Arc collection created by a prior op
-about: "Arc/<basis-name>"   // e.g. Arc/reviewedclaim-x-arxiv-2601-03192, over ["ReviewedClaim/X", "ExternalSourceReference/arxiv-2601.03192"]
+{
+  operation: "add",
+  name: "claim-bases/x--arxiv-2601-03192",
+  shapes: ["ClaimBasis"],
+  data: {
+    // Native traversal target — a Thing that declares Arc, written by a prior op,
+    // from "claims/x" to "papers/arxiv-2601.03192"
+    about: "claim-papers/x--arxiv-2601-03192",
 
-// Mirrored fields on the assertion's data (context-free legibility)
-data: {
-  claimWref: "ReviewedClaim/X",
-  sourceWref: "ExternalSourceReference/arxiv-2601.03192",
-  sourceKind: "arxiv",
-  sourceIdentityKey: "2601.03192",
-  // ... plus the actual basis-payload fields
+    // Mirrored fields (context-free legibility)
+    claimWref: "claims/x",
+    sourceWref: "papers/arxiv-2601.03192",
+    sourceKind: "arxiv",
+    sourceIdentityKey: "2601.03192",
+    // ... plus the actual basis-payload fields
+  },
 }
 ```
 

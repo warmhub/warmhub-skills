@@ -6,7 +6,7 @@ Checkpoint Gate 5 (see [`checkpoint.md`](checkpoint.md) § Question 5) requires 
 
 1. Match your graph's fingerprint in [`pattern-catalog.md`](pattern-catalog.md). The fingerprint you match here determines which template block below applies.
 2. Open the matching template section.
-3. Fill in the placeholders (`<ProjectShapeName>`, `<wref>`, `<expectedValue>`) with your project's specific values.
+3. Fill in the placeholders (`<ProjectShapeName>`, `<wref>`, `<expectedValue>`) with your project's specific values. A placeholder such as `<claims/example>` stands for the name of one of your Things; the prefix is a naming convention and does not set the Shape, so use your project's prefix for that kind.
 4. Run each query through `wh` against your live repo.
 5. Compare the actual output to the expected-answer pattern. Any deviation is a context-free-reader-contract failure that you fix at the manifest layer (descriptions, mirrored fields, etc.) — *not* by adding project documentation outside the graph.
 
@@ -20,26 +20,26 @@ A runner that loads this file, prompts for the placeholders, and executes the qu
 
 ```
 Q5.1 — describeRepo identifies this as a literature-review graph.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: the description mentions "claims", "sources", "review", and identifies the
   external source-proxy shape (e.g. ExternalSourceReference or your project's analog).
 
 Q5.2 — Reverse traversal: from a source proxy, find all claims backed by it.
-  wh thing refs <ExternalSourceReference/arxiv-XXXX.YYYYY> --inbound
+  wh thing refs <papers/arxiv-XXXX.YYYYY> --inbound
   Expected: returns every ReviewedClaim (or analog) whose ClaimBasis points at this source.
 
 Q5.3 — Certainty is reconstructable from assertions, not from a status field.
-  wh assertion list --about <ReviewedClaim/example> --shape <CertaintyOpinion>
+  wh assertion list --about <claims/example> --shape <CertaintyOpinion>
   Expected: at least one belief/disbelief/uncertainty assertion; the claim's current
   state is the most recent CertaintyOpinion, not a mutable field on the claim itself.
 
 Q5.4 — A claim's full basis chain is one traversal.
-  wh thing about <ReviewedClaim/example> --resolve-collections
+  wh thing about <claims/example> --resolve-collections
   Expected: returns ClaimBasis assertions; each has mirrored claimWref + sourceWref
   + sourceKind + sourceIdentityKey so the reader doesn't need to resolve Arc members.
 
 Q5.5 — Review events explain certainty changes (not a mutable status field).
-  wh assertion list --about <ReviewedClaim/example> --shape <ReviewEvent>
+  wh assertion list --about <claims/example> --shape <ReviewEvent>
   Expected: at least one ReviewEvent per change in certainty; each cites reviewer,
   certainty-before / certainty-after, and (if applicable) introduced source keys.
 ```
@@ -50,17 +50,17 @@ Q5.5 — Review events explain certainty changes (not a mutable status field).
 
 ```
 Q5.1 — describeRepo identifies synthesize-and-test domain (synthesis + verdict + adoption).
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: descriptions name the synthesized-candidate shape, the verdict shape,
   the materialization-context shape, and the post-adoption evidence shape.
 
 Q5.2 — Materialization context is content-addressed and bound to verdicts.
-  wh thing about <BacktestResult/example> --resolve-collections
+  wh thing about <backtests/example> --resolve-collections
   Expected: a wref to MaterializationContextPolicy that records oracle-file exposure,
   fix-PR awareness, and other circularity-relevant inputs. The policy is content-addressed.
 
 Q5.3 — Competing attributions preserve all alternatives, not just a winner.
-  wh assertion list --about <FiledDefectIssue/example> --shape <MetaIntroductionHypothesis>
+  wh assertion list --about <defect-issues/example> --shape <MetaIntroductionHypothesis>
   Expected: returns one MetaIntroductionHypothesis with members and competingHypotheses;
   every AttributionHypothesis member carries its own BDU (belief/disbelief/uncertainty).
 
@@ -80,19 +80,19 @@ Q5.5 — Cost telemetry is on every expensive derivation.
 
 ```
 Q5.1 — describeRepo identifies proposal/ratification ceremony.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names Proposal, ProposalVersion, Vote, Ratification, and
   whichever PolicyArtifact / ComplianceSignal shapes apply.
 
 Q5.2 — Open proposals + their alternatives are one query (alternatives preserved with
   dismissalRationale even when not chosen).
-  wh assertion list <Proposal/example> --shape <Alternative>
+  wh assertion list <proposals/example> --shape <Alternative>
   Expected: every Alternative ever considered is returned (not just the chosen one);
   each carries a dismissalRationale field if it was not adopted.
 
 Q5.3 — Votes traversable from both proposal side and voter side (Arc-about).
-  wh thing about <Proposal/example> --resolve-collections --shape <Vote>
-  wh thing about <Voter/example> --resolve-collections --shape <Vote>
+  wh thing about <proposals/example> --resolve-collections --shape <Vote>
+  wh thing about <voters/example> --resolve-collections --shape <Vote>
   Expected: both directions return the same Vote assertions — the Arc-about works
   from either endpoint, not just the proposal side.
 
@@ -113,24 +113,24 @@ Q5.5 — ComplianceSignal stream is wired for ratified policies (bounded-continu
 
 ```
 Q5.1 — describeRepo identifies operational telemetry domain.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names ServiceProxy, DeploymentEvent, HealthSignal, and any
   FeatureFlagState / Incident shapes; identifies which are append-only events.
 
 Q5.2 — Current deployed state is reconstructable from DeploymentEvent (append-only),
   no current-state shape exists.
-  wh assertion list <ServiceProxy/example> --shape <DeploymentEvent> --all
+  wh assertion list <services/example> --shape <DeploymentEvent> --all
   Expected: returns the event timeline; current deployment is "the most recent event"
   derived by sort, not a mutable field. No CurrentDeployment shape exists.
 
 Q5.3 — HealthSignal stream is wired for every ServiceProxy (continuous evidence).
-  wh thing about <ServiceProxy/example> --resolve-collections --shape <HealthSignal> --limit 10
+  wh thing about <services/example> --resolve-collections --shape <HealthSignal> --limit 10
   Expected: returns recent signals; absence of any HealthSignal for a service means
   adoption is unfalsifiable (D6=continuous gate failed).
 
 Q5.4 — IncidentLink is Arc-about (incident endpoint and service endpoint queryable).
-  wh thing about <Incident/example> --resolve-collections --shape <IncidentLink>
-  wh thing about <ServiceProxy/example> --resolve-collections --shape <IncidentLink>
+  wh thing about <incidents/example> --resolve-collections --shape <IncidentLink>
+  wh thing about <services/example> --resolve-collections --shape <IncidentLink>
   Expected: same IncidentLinks reachable from both sides.
 
 Q5.5 — FeatureFlagState is append-only events; current flag values are derived, not stored.
@@ -145,13 +145,13 @@ Q5.5 — FeatureFlagState is append-only events; current flag values are derived
 
 ```
 Q5.1 — describeRepo names theme-synthesis pattern (clustering + recommendation).
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description identifies ticket/transcript proxies, ThemeHypothesis as
   graph-synthesized, and the materialization-context shape.
 
 Q5.2 — ClusterAssignment is Arc-about so tickets-per-theme and themes-per-ticket both work.
-  wh thing about <TicketProxy/example> --resolve-collections --shape <ClusterAssignment>
-  wh thing about <ThemeHypothesis/example> --resolve-collections --shape <ClusterAssignment>
+  wh thing about <tickets/example> --resolve-collections --shape <ClusterAssignment>
+  wh thing about <themes/example> --resolve-collections --shape <ClusterAssignment>
   Expected: same assignments reachable from both sides.
 
 Q5.3 — MaterializationContextPolicy records the clustering pass's inputs as content-addressed.
@@ -176,7 +176,7 @@ Q5.5 — ThemeOutcomeSignal is bounded-continuous post-adoption evidence.
 
 ```
 Q5.1 — describeRepo identifies foundation-library status and lists the typed vocabulary.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names Topic, Hypothesis, Experiment, Measurement, Finding,
   Decision, Anchor, Outcome, Actor, Claim — and identifies the repo as a foundation
   consumed by other repos.
@@ -188,18 +188,18 @@ Q5.2 — Each shape's description is *abstract* (no leaf-application assumptions
 
 Q5.3 — Anchor refit chain is traversable: from any Measurement back through anchors
   to the originating Topic.
-  wh thing refs <Measurement/example> --outbound
+  wh thing refs <measurements/example> --outbound
     -> Anchor -> previous Anchor -> ... -> Topic
   Expected: a single traversal walks the full refit chain to the Topic; intermediate
   Anchors are themselves traversable.
 
 Q5.4 — Hypothesis lifecycle is reconstructable from Decision events, not a mutable field.
-  wh assertion list <Hypothesis/example> --shape <Decision>
+  wh assertion list <hypotheses/example> --shape <Decision>
   Expected: at least one Decision per state change (adopted / rejected / deferred);
   current lifecycle is the most recent Decision, not a mutable status field on Hypothesis.
 
 Q5.5 — Actor-as-Thing supports cross-session attribution queries.
-  wh thing refs <Actor/example> --inbound
+  wh thing refs <actors/example> --inbound
   Expected: returns every Hypothesis, Critique, or Decision attributed to this actor
   across all sessions — Actor is a durable Thing, not a session-ephemeral tag.
 ```
@@ -210,12 +210,12 @@ Q5.5 — Actor-as-Thing supports cross-session attribution queries.
 
 ```
 Q5.1 — describeRepo identifies metric-optimization loop + landedCommit linkage.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names Hypothesis, Measurement, Anchor, Decision; identifies
   that Decision.landedCommit links iterations to real commits.
 
 Q5.2 — Hypothesis trajectory: from current Anchor, history of all preceding measurements.
-  wh thing refs <Anchor/current> --outbound
+  wh thing refs <anchors/current> --outbound
     -> previous Anchor -> Measurement -> Hypothesis (...iterate)
   Expected: walk through the refit chain returns the full measurement history.
 
@@ -241,15 +241,16 @@ Q5.5 — Reject-paths preserved: failed hypotheses queryable to prevent re-explo
 
 ```
 Q5.1 — describeRepo identifies benchmark capture with commensurability contract.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names BenchmarkSystem, Dataset, Metric, Measurement, and
   identifies commensurability metadata as first-class fields (not opaque metadata).
 
 Q5.2 — Measurement.about carries (BenchmarkSystem, Dataset, Metric) — three-axis traversal.
   wh assertion list --shape <Measurement> --limit 1 --json
-  Expected: aboutWref starts with a named collection wref with a `+`-free name, e.g.
-  `Set/measurement-key-<slug>` (or a named domain shape wref, e.g. `MeasurementKey/<slug>`),
-  not a single-thing wref with the other two axes as flat-string data fields. (`triple` is
+  Expected: aboutWref is the `+`-free name of one Thing that carries all three axes,
+  e.g. `measurement-keys/<slug>`, which either declares `Set` in its Shapes or is a
+  named domain Thing such as a `MeasurementKey`. Not a single-axis wref with the
+  other two axes as flat-string data fields. (`triple` is
   removed and collection names must not contain `+`.)
 
 Q5.3 — Commensurability metadata are first-class graph fields.
@@ -264,7 +265,7 @@ Q5.4 — Two arbitrary Measurements can be cross-checked for trend-comparability
   trend-comparison doesn't require parsing prose.
 
 Q5.5 — Portfolio rollups across BenchmarkSystem are traversable.
-  wh thing about <BenchmarkSystem/example> --resolve-collections --shape <Measurement> --limit 100
+  wh thing about <benchmark-systems/example> --resolve-collections --shape <Measurement> --limit 100
   Expected: returns every Measurement for the system; portfolio-level queries
   fall out of this without re-aggregating.
 ```
@@ -275,12 +276,12 @@ Q5.5 — Portfolio rollups across BenchmarkSystem are traversable.
 
 ```
 Q5.1 — describeRepo identifies multi-persona council + cross-session scorecards.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names Persona, Seat, Critique, Hypothesis with attribution;
   identifies Persona-as-Thing (durable identity, not session tag).
 
 Q5.2 — Persona is a durable Thing with attribution edges from every Hypothesis it generated.
-  wh thing refs <Persona/example> --inbound
+  wh thing refs <personas/example> --inbound
   Expected: returns every Hypothesis, Critique, and SessionOutcome attributed to
   this Persona across all sessions; non-empty even for retired Personas.
 
@@ -307,13 +308,13 @@ Q5.5 — SessionOutcome rolls up per-session hypothesis convergence.
 
 ```
 Q5.1 — describeRepo identifies retrieval-oriented knowledge graph.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names Topic, Lesson, Learning; identifies retrieval as the
   primary use case (vector search over Lesson filtered by Learning.relevance).
 
 Q5.2 — Learning is Arc-about (Topic → Lesson) so both reverse-traversals work.
-  wh thing about <Topic/example> --resolve-collections --shape <Learning>
-  wh thing about <Lesson/example> --resolve-collections --shape <Learning>
+  wh thing about <topics/example> --resolve-collections --shape <Learning>
+  wh thing about <lessons/example> --resolve-collections --shape <Learning>
   Expected: same Learning assertions reachable from both endpoints. (This was the
   smoke test used during script development.)
 
@@ -325,12 +326,12 @@ Q5.3 — Vector search over Lesson is filterable by Learning.relevance.
 
 Q5.4 — Topic.description is rich enough that an agent can decide whether to pull a
   Lesson under that Topic before reading the Lesson.
-  wh thing view <Topic/example>
+  wh thing view <topics/example>
   Expected: description is non-trivial prose that answers "what does this Topic
   cover?" — not a one-liner like "topic for X".
 
 Q5.5 — A Lesson's full topical context (all Learning edges) is one query.
-  wh thing refs <Lesson/example> --inbound
+  wh thing refs <lessons/example> --inbound
   Expected: returns every Arc (Topic, Lesson) containing this Lesson, so the
   reader sees all Topics this Lesson has been tagged into.
 ```
@@ -341,7 +342,7 @@ Q5.5 — A Lesson's full topical context (all Learning edges) is one query.
 
 ```
 Q5.1 — describeRepo identifies external-proxy + relationship-analysis pattern.
-  wh repo describe --repo <your-repo>
+  wh graph describe --graph <your-repo>
   Expected: description names the proxy shapes (TicketProxy, Vent, etc.) and
   the relationship-assertion shapes; identifies BDU-on-edges as the certainty model.
 
@@ -349,23 +350,24 @@ Q5.2 — Relationship assertions use Arc / Bond / Set about (or a named domain s
   single-thing about with flat-string endpoints. This is the canonical Gate 2 failure surface.
   wh assertion list --shape <DuplicateAssertion> --limit 1 --json
   wh assertion list --shape <Resolution> --limit 1 --json
-  Expected: aboutWref starts with `Arc/`, `Bond/`, or `Set/` — never a bare
-  `Proxy/...` wref with the other endpoint hidden in data fields. (Running
+  Expected: aboutWref names a Thing that declares `Arc`, `Bond`, or `Set` in its
+  Shapes — never a single proxy wref (such as `tickets/...`) with the other
+  endpoint hidden in data fields. (Running
   `verify-relationships.mjs` over this fingerprint is recommended.)
 
 Q5.3 — From any external proxy, all relationships pointing at it are traversable
   via wh thing refs --inbound (both same-repo and cross-repo).
-  wh thing refs <TicketProxy/example> --inbound
+  wh thing refs <tickets/example> --inbound
   Expected: returns every Arc / Bond / Set containing this proxy, across same-repo
   and cross-repo refs in one call.
 
 Q5.4 — CertaintyOpinion lives on the relationship assertion, not on either endpoint.
-  wh assertion list <DuplicateAssertion/example> --shape <CertaintyOpinion>
+  wh assertion list <duplicates/example> --shape <CertaintyOpinion>
   Expected: BDU triple is asserted about the relationship's wref, not about either
   endpoint's wref.
 
 Q5.5 — Human-confirmed-or-refuted relationships have an attached ReviewEvent.
-  wh assertion list <DuplicateAssertion/example> --shape <ReviewEvent>
+  wh assertion list <duplicates/example> --shape <ReviewEvent>
   Expected: every relationship that was reviewed carries at least one ReviewEvent
   with judgment + reviewer + certainty-before / certainty-after.
 ```
@@ -376,44 +378,44 @@ Q5.5 — Human-confirmed-or-refuted relationships have an attached ReviewEvent.
 
 ```
 Q5.1 — describeRepo (on both repos) identifies which is substrate and which is consumer.
-  wh repo describe --repo <substrate-repo>
-  wh repo describe --repo <consumer-repo>
+  wh graph describe --graph <substrate-repo>
+  wh graph describe --graph <consumer-repo>
   Expected: substrate's description names it as a foundation-library role and lists
   identity-substrate shapes; consumer's description names which substrate(s) it
   references via cross-repo wrefs.
 
 Q5.2 — From a substrate entity, wh thing refs --inbound returns BOTH same-repo refs
   AND cross-repo refs from the consumer repo in one call.
-  wh thing refs example --repo <substrate-repo> --inbound
+  wh thing refs facilities/example --graph <substrate-repo> --inbound
   Expected: result includes same-repo Demographics / FrsProgramLink AND cross-repo
   EmissionsRecord from the consumer repo, in one response. (Cross-repo refs
   appear in the inbound list when consumer repos hold typed wrefs into the
   substrate.)
 
 Q5.3 — Substrate's foundation-library discipline is visible.
-  wh shape list --repo <substrate-repo>
-  wh shape view Facility --repo <substrate-repo>
-  wh shape history Facility --repo <substrate-repo>
+  wh shape list --graph <substrate-repo>
+  wh shape view Facility --graph <substrate-repo>
+  wh shape history Facility --graph <substrate-repo>
   Expected: shape names are abstract (not consumer-specific); shape history is
   additive-only (no field renames or removals across versions).
 
 Q5.4 — Consumer's high-volume shapes use cross-repo wrefs to substrate entities.
-  wh assertion list --shape <EmissionsRecord> --repo <consumer-repo> --limit 1 --json
+  wh assertion list --shape <EmissionsRecord> --graph <consumer-repo> --limit 1 --json
   Expected: aboutWref or a data field carries a wref pointing into substrate-repo,
   pinned with @vN. NOT a duplicated identity string or local copy of the
   substrate entity.
 
 Q5.5 — Sample-friendly naming on substrate entities lets consumer batch-fetch.
   # Build a list of known substrate ids and batch-fetch their deterministic wrefs.
-  echo -e "Facility/id-1\nFacility/id-2\nFacility/id-3" | wh thing view --file=- --repo <substrate-repo>
+  echo -e "facilities/id-1\nfacilities/id-2\nfacilities/id-3" | wh thing view --file=- --graph <substrate-repo>
   Expected: 1000 deterministic substrate IDs become 1000 wrefs and resolve in
   one or two paginated calls; no enumeration of the full substrate is needed.
   (The --file=- form reads wrefs from stdin; see `wh thing view --help`.)
 
 Q5.6 — A reader holding ONLY a consumer thing (no access to the substrate repo)
   can still interpret its cross-repo wref field from the field description alone.
-  wh thing view <ConsumerThing> --repo <consumer-repo> --json
-  wh shape view <ConsumerShape> --repo <consumer-repo>
+  wh thing view <ConsumerThing> --graph <consumer-repo> --json
+  wh shape view <ConsumerShape> --graph <consumer-repo>
   Expected: the wref field's description names the target shape, the join-key
   semantics, AND the unresolved-target policy — e.g. "resolved NIC RSSD identity;
   optional, absent until the host link-resolver lands it; raw key in rssdRawKey".
@@ -423,8 +425,8 @@ Q5.6 — A reader holding ONLY a consumer thing (no access to the substrate repo
 Q5.7 — A reader landing on a substrate entity (the linked thing), with no access
   to any consumer repo, reads it as a self-standing identity and knows reverse
   links are discoverable rather than absent.
-  wh thing view Facility/example --repo <substrate-repo>
-  wh thing refs Facility/example --inbound --repo <substrate-repo>
+  wh thing view facilities/example --graph <substrate-repo>
+  wh thing refs facilities/example --inbound --graph <substrate-repo>
   Expected: the substrate entity is fully interpretable on its own (identity +
   enrichments described in-shape; it does NOT depend on knowing who links to it);
   reverse cross-repo links are found via refs --inbound — not assumed absent
@@ -442,7 +444,8 @@ QU.1 — describeRepo output is non-trivial. Every shape has a non-empty descrip
   every field has a non-empty description. No "TODO" placeholders.
 
 QU.2 — Hierarchical names encode stable identity, not mutable state. No shapes named
-  with rank, queue, status, or needs-* suffixes.
+  with rank, queue, status, or needs-* suffixes. Each kind of record has its own name
+  prefix, and no name starts with a Shape name.
 
 QU.3 — Append-only revision is visible: no shapes are mutated in place. State changes
   flow through certainty / basis / review / decision assertions.
@@ -461,8 +464,8 @@ QU.6 — Any wref-typed field that can point across a repo boundary declares its
   field). See cross-repo-linkage.md.
 
 QU.7 — Join-target backbone repos are self-describing to consumers.
-  wh repo describe --repo <substrate-repo>
-  wh shape view <BackboneShape> --repo <substrate-repo>
+  wh graph describe --graph <substrate-repo>
+  wh shape view <BackboneShape> --graph <substrate-repo>
   Expected: the shape description names the durable join key, whether consumers
   should pin or re-resolve, and which v1/v2 shape/key is current. Deprecated or
   migrated shapes point readers at the successor and migration policy.

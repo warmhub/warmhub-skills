@@ -44,7 +44,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `ExternalSourceReference` — proxy for a paper/document, identified by arXiv/DOI/URL.
 - `GitFileRevision` — proxy for a wiki file at a specific commit + path.
 - `ReviewedClaim` — a manually reviewed, scoped claim about a subject artifact.
-- `ClaimBasis` — assertion linking a claim to a source proxy. A named collection op creates the Arc first; the assertion targets it via `about: "Arc/<name>"`. Mirrored fields: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey`.
+- `ClaimBasis` — assertion linking a claim to a source proxy. A Thing that declares `Arc` in `shapes` is written first; the assertion targets it with `data.about` set to that Thing's name. Mirrored fields: `claimWref`, `sourceWref`, `sourceKind`, `sourceIdentityKey`.
 - `CertaintyOpinion` — belief / disbelief / uncertainty about a claim (binary proposition).
 - `ReviewEvent` — single-author event recording why certainty, basis, or scope changed.
 
@@ -71,7 +71,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 
 **Load-bearing shapes.**
 - `FiledDefectIssue` / `CaughtDefectCase` — externally-addressed defect identities.
-- `Topic/<defectClassId>` — class spine for cross-case traversal.
+- `Topic` Things named `topics/<defectClassId>` — class spine for cross-case traversal.
 - `MetaIntroductionHypothesis` + `AttributionHypothesis` — competing hypotheses for "where did the defect come from," each with its own BDU, evidence trail, and per-method retraction.
 - `PreventionOpportunity` — bridge from a case to candidate remedies.
 - `DetectionRemedyHypothesis` — the synthesized candidate.
@@ -105,7 +105,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `Proposal` — graph-internal identity; carries problem statement, scope, rationale.
 - `ProposalVersion` — append-only revision; never overwrites prior versions.
 - `Alternative` — a competing proposed approach within the same Proposal scope; preserved with `dismissalRationale` even when not chosen.
-- `Vote` — `about: "Arc/<name>"` (named collection op first); carries position + commentary.
+- `Vote` — `data.about` names a Thing that declares `Arc` (written first); carries position + commentary.
 - `Ratification` — durable adoption event with effective-from + rollback criteria.
 - `PolicyArtifact` — proxy for the deployed policy (URL, file path, config key) — the graph asserts about it but doesn't store its bytes.
 - `ComplianceSignal` — bounded-cadence external evidence; adjudication slot for whether the policy is still serving its goal.
@@ -134,7 +134,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `DeploymentEvent` — append-only event; commit + image + actor + timestamp.
 - `FeatureFlagState` — append-only flag-change event; no current-value shape (current state is derived).
 - `HealthSignal` — continuous external evidence (probe result, error-rate sample, latency snapshot).
-- `IncidentLink` — `about: "Arc/<name>"` (named collection op first); connects an incident proxy to suspected services.
+- `IncidentLink` — `data.about` names a Thing that declares `Arc` (written first); connects an incident proxy to suspected services.
 
 **Why this works.** Cheap deterministic ingestion means no content-addressed policy shapes. Continuous evidence is the entire point — without it the graph is just a stale config dump. Agent-only ephemeral review means no `ReviewEvent` ceremony around state changes. Simple D8 means flat shapes without competing-hypothesis machinery.
 
@@ -158,7 +158,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 **Load-bearing shapes.**
 - `TicketProxy` / `TranscriptProxy` — external identities.
 - `ThemeHypothesis` — graph-synthesized cluster identity, with BDU on "this is a coherent theme" (binary proposition).
-- `ClusterAssignment` — `about: "Arc/<name>"` (named collection op first); carries assignment confidence.
+- `ClusterAssignment` — `data.about` names a Thing that declares `Arc` (written first); carries assignment confidence.
 - `MaterializationContextPolicy` — what the clustering pass saw (corpus window, embedding model, prompt version). Content-addressed.
 - `ThemeReviewEvent` — human PM review that confirms/rejects/refines a theme.
 - `InvestmentRecommendation` — proposed engineering investment derived from a cluster's volume + severity.
@@ -247,7 +247,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - `BenchmarkSystem` — pre-existing catalog of systems under test (convex / postgres-cli / postgres-direct / ...).
 - `Dataset` — pre-existing catalog of workloads.
 - `Metric` — pre-existing catalog of measured quantities (latency, throughput, glob).
-- `Measurement` — graph-synthesized assertion; the `triple` type is removed, so the (System, Dataset, Metric) key is modeled as a named domain shape whose name encodes all three axes with a `+`-free slug (e.g. `MeasurementKey/<system>-<dataset>-<metric>`; `+` is rejected in thing and collection names alike), referenced via `about: "<Shape>/<name>"`, or as a named Set via `about: "Set/<name>"` if the axes are mechanical grouping rather than a genuine domain shape; carries percentile envelope + commensurability metadata as **first-class fields** (gitSha, repoState, latencyProfile, dataset variant).
+- `Measurement` — graph-synthesized assertion; the `triple` type is removed, so the (System, Dataset, Metric) key is modeled as a named domain shape whose name encodes all three axes with a `+`-free slug (e.g. a `MeasurementKey` Thing named `measurement-keys/<system>-<dataset>-<metric>`; `+` is rejected in thing and collection names alike), referenced by putting that name in `data.about`, or as a Thing that declares `Set`, also referenced by name in `data.about`, if the axes are mechanical grouping rather than a genuine domain shape; carries percentile envelope + commensurability metadata as **first-class fields** (gitSha, repoState, latencyProfile, dataset variant).
 
 **Why this works.** The hard problem in this domain is not "how do I store a number" but "how do I know two stored numbers are comparable." Pulling the comparability metadata out of an opaque `metadata` JSON blob and into first-class graph fields is what lets queries answer "which two of these can I trend together?" Without that, the graph is a numeric ledger; with it, the graph is a benchmarking analysis substrate.
 
@@ -270,7 +270,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 
 **Load-bearing shapes.**
 - Inherits the research-arc foundation.
-- Adds: `Persona` (durable typed Thing — not a role label); `Seat` (`about: "Arc/<name>"`, named collection op first — council membership as first-class assertion); `Hypothesis.persona` wref; `Hypothesis.premises[]` wref array (MECE conditions); `Hypothesis.discriminatesAgainst[]`; `RoundDigest`, `SessionOutcome`; `Critique` as a multi-target authored assertion.
+- Adds: `Persona` (durable typed Thing — not a role label); `Seat` (`data.about` names a Thing that declares `Arc`, written first — council membership as first-class assertion); `Hypothesis.persona` wref; `Hypothesis.premises[]` wref array (MECE conditions); `Hypothesis.discriminatesAgainst[]`; `RoundDigest`, `SessionOutcome`; `Critique` as a multi-target authored assertion.
 
 **Why this works.** Persona persistence (D7.2 = durable typed Thing) is the design's central commitment. A persona is not a tag on an output; it's an identity with track record, attribution edges, and cross-session scoring. Adversarial review (D7.1 = adversarial-mixed) requires `Critique` as a multi-target shape, not a single-author `ReviewEvent`. Competing hypotheses with structured premises (D8.1 = multiple, D8.2 = confidence-with-structured-premises) preserve discriminating evidence rather than collapsing to a winner.
 
@@ -294,7 +294,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 **Load-bearing shapes (3).**
 - `Topic` — named anchor; description-only thing.
 - `Lesson` — atomic insight (title + context + insight + trigger); single canonical fact, not a multi-perspective claim.
-- `Learning` — assertion connecting Topic to Lesson via Arc: `about: "Arc/<name>"` (named collection op first); carries `relevance: { b, d, u, a }` as edge-strength opinion.
+- `Learning` — assertion connecting Topic to Lesson via Arc: `data.about` names a Thing that declares `Arc` (written first); carries `relevance: { b, d, u, a }` as edge-strength opinion.
 
 **Why this works.** Cheap derivation + declarative output + topic-spine cluster pattern fits a knowledge-accumulation graph cleanly. The defining design choice is **D8.2 = BDU-on-edges**: the *Lesson* is a fact (no uncertainty about whether it's true); the *strength of association between a Lesson and a Topic* is what carries belief / disbelief / uncertainty. This places BDU in a structurally different location than the synthesize-and-test pattern.
 
@@ -326,7 +326,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 
 **Why this works.** External-proxy + relationship-analysis is the pattern that shows up across many "ingest from system X, analyze structurally" graphs. The defining design choice is **D8.2 = BDU-on-edges**: BDU lives on the relationship assertions because the strength of the *connection* is what's uncertain, not the truth of either endpoint. This is also the pattern where a friction-vent design (Resolution about an Arc) succeeds and a ticket-dedup v1 design (DuplicateAssertion about a single thing with the other endpoint as a flat field) fails — they target the same fingerprint but get the arity choice opposite.
 
-**Where it fails when transplanted.** Used for literature curation, the absence of `about: source-proxy` claims (basis chain) and review-event ceremony loses the curation discipline. Used for synthesize-and-test, the lack of materialization context and continuous evidence post-adoption leaves verdicts unfalsifiable.
+**Where it fails when transplanted.** Used for literature curation, the absence of `data.about: source-proxy` claims (basis chain) and review-event ceremony loses the curation discipline. Used for synthesize-and-test, the lack of materialization context and continuous evidence post-adoption leaves verdicts unfalsifiable.
 
 **D8.2 caveat (same as #10).** BDU triples on relationship strength stretch the binomial-opinion constraint when "strength" is a continuous concept. For pure binary propositions ("is this a duplicate? yes/no"), BDU-on-edges is canonical; for continuous strength, consider a single confidence score on the assertion instead.
 
@@ -343,7 +343,7 @@ If your fingerprint doesn't match any cleanly, see § Layered Co-Fingerprints at
 - "What facility is this emissions record about?" → earns the cross-repo wref from consumer to substrate; resolves transparently via `wh thing about`.
 - "What references this facility, across all repos?" → earns same-repo + cross-repo inbound traversal via `wh thing refs --inbound`, which returns refs from both the substrate's own repo (Demographics, FrsProgramLink) and from any consumer repo (EmissionsRecord) in one call. This is the **only** reverse-traversal call that crosses the boundary: reverse `wh thing about` is repo-local and would return 0 from the substrate side. That asymmetry is exactly why the consumer→substrate link must be a typed wref field, not an `about`-Arc or `about`-Bond — see [`primitives.md` § The four-direction test across a repo boundary](../../modeling-foundations/references/primitives.md).
 - "Did the substrate's identity for this entity change between version X and version Y?" → earns the substrate's append-only revision discipline (additive-only shape evolution) plus cross-repo wref version-pinning.
-- "Population-weighted match of substrate attributes with consumer events" → earns sample-friendly deterministic naming on the substrate (e.g. `Demographics/<facilityId>/<radius>`) so the consumer can batch-fetch the relevant slice without enumerating the full substrate.
+- "Population-weighted match of substrate attributes with consumer events" → earns sample-friendly deterministic naming on the substrate (e.g. `demographics/<facilityId>/<radius>`) so the consumer can batch-fetch the relevant slice without enumerating the full substrate.
 
 **Load-bearing shapes (split across two repos).**
 
@@ -380,16 +380,16 @@ score.
 - "What is the consensus belief/disbelief/uncertainty for proposition P?" -> earns Veritas `Consensus`.
 - "Which sources supported or opposed proposition P, and how uncertain were they?" -> earns one `Certainty` per source per stable proposition assertion.
 - "Which source identities are reliable for this proposition type?" -> earns durable source Things and reputation audit.
-- "What ground truth trained these reputations?" -> earns `Oracle/*` sources that write `Certainty` on the same proposition assertions.
+- "What ground truth trained these reputations?" -> earns oracle sources (Things whose Shapes include `Oracle` (it declares `Oracle` or a Shape that composes it)) that write `Certainty` on the same proposition assertions.
 - "What evidence did source S use when it judged proposition P?" -> earns repo-owned prediction/review/adjudication records, not extra fields on component shapes.
 
 **Load-bearing shapes.**
 
-- Stable binary proposition assertion targets such as `PullRequestRegression/<pr-id>` or
-  `MatchHomeWin/<match-id>`; their `about` points at the domain thing or relationship being judged,
+- Stable binary proposition assertion targets such as `pr-regressions/<pr-id>` (a
+  `PullRequestRegression`) or `home-wins/<match-id>` (a `MatchHomeWin`); their `about` points at the domain thing or relationship being judged,
   and their names encode proposition identity, not source, run, or probability.
 - Veritas component shapes: `Certainty`, `Support`, `Opposition`, `Consensus`, and `Oracle`.
-- Durable source Things such as `Agent/*`, `Pipeline/*`, `Human/*`, and `Oracle/*`.
+- Durable source Things, one name prefix per kind of source, such as `agents/*`, `pipelines/*`, `humans/*`, and `oracles/*`. Oracle status comes from the Thing's Shapes including `Oracle` (declared or composed), not from the prefix.
 - Repo-owned provenance records such as `PredictionRecord`, `ReviewRecord`, or `AdjudicationRecord` for evidence wrefs, model version, frozen source output, and rationale.
 
 **Why this works.** Veritas only learns and fuses when multiple sources write opinions about the same
@@ -476,7 +476,7 @@ These show up as catalog matches that *almost* work but fail in characteristic w
 
 ### A5. Single-Thing About When the Relationship is Multi-Endpoint
 
-**Symptom.** A relationship assertion has `about: <single thing>` with the second (or third) endpoint as a flat string field. The relationship is invisible from one of its endpoints' `wh thing about` queries.
+**Symptom.** A relationship assertion has `data.about: <single thing>` with the second (or third) endpoint as a flat string field. The relationship is invisible from one of its endpoints' `wh thing about` queries.
 
 **Fix.** Use Arc / Bond / Set per the four-direction test in `primitives.md` (or a named domain shape for a true 3-way relation). A single-thing `DuplicateAssertion` is the canonical failure; an Arc-about `Resolution` is the canonical pass. The *multi-valued* form of this anti-pattern is a JSON-stringified list of ids in a single string field (`evidence_ids: "[...]"`): use a native **wref array** (each member reverse-traverses via `refs --inbound`, cross-repo) or a relationship assertion instead — never a stringified blob. See [`field-level-design.md` § Multi-valued fields](../../modeling-foundations/references/field-level-design.md).
 

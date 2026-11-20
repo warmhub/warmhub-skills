@@ -47,8 +47,8 @@ npx wrangler secret put WH_TOKEN
 
 Recommended first pass:
 
-- `WARMHUB_API_URL` and `WARMHUB_REPO` as non-secret Worker vars in `wrangler.jsonc`.
-- `WH_TOKEN` as a Cloudflare secret, scoped to `<org>/<repo>=repo:read`.
+- `WARMHUB_API_URL` and `WARMHUB_GRAPH` as non-secret Worker vars in `wrangler.jsonc`.
+- `WH_TOKEN` as a Cloudflare secret, scoped to `<org>/<graph>=repo:read`.
 - `.dev.vars` or `.env` only for local development. Do not commit either file.
 
 Make `workers_dev` and `preview_urls` explicit in `wrangler.jsonc` so the public URL behavior is not an implicit Wrangler default.
@@ -58,7 +58,7 @@ Make `workers_dev` and `preview_urls` explicit in `wrangler.jsonc` so the public
 Start with the one-fact probe from `connect-warmhub-app`, then expand it into display routes. Use
 direct WarmHub HTTP fetch or a runtime-verified SDK call. The Worker should:
 
-1. Read `env.WARMHUB_API_URL` and `env.WARMHUB_REPO`; read `env.WH_TOKEN` for authenticated mode.
+1. Read `env.WARMHUB_API_URL` and `env.WARMHUB_GRAPH`; read `env.WH_TOKEN` for authenticated mode.
 2. Add bearer auth server-side only when a token is configured.
 3. Return JSON with clear errors for missing env, auth failure, or upstream failure.
 4. Cache only public-safe responses.

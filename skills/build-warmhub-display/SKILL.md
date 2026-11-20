@@ -91,7 +91,7 @@ Return:
 - Anonymous public reads stay within the documented API cap; complete datasets use authenticated reads
   and ordinary SDK iterator/all helpers.
 - Incremental change scans are used only for a long-lived projection, and the terminal consumer
-  `repoSeq` is saved only after a successful exhausted scan.
+  `graphSeq` is saved only after a successful exhausted scan.
 - Component-backed claims are read from component-owned outputs, not local lookalike fields, unless
   the UI explicitly labels them as pending/local estimates.
 - Human-facing outputs include WarmHub source attribution unless the repo identity is intentionally

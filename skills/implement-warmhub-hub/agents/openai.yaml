@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement WarmHub Hub"
+  short_description: "Turn a WarmHub repo or an API into a working hub"
+  default_prompt: "Use $implement-warmhub-hub to turn an existing WarmHub repository or API into a hub on the WarmHub answer exchange: design its intents, build its toolset, and ship until its test runs pass."

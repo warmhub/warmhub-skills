@@ -127,7 +127,7 @@ WarmHub reaches things two ways: by **identity** (name / wref / prefix glob) and
 
 **The question.** Count the fields the shape declares filterable. Compare against the few that have an indexed-field entry actually built. How wide is the gap, and at what instance count does it bite?
 
-**NC voters.** The shape declares 66 fields filterable; the indexed set is empty. At 9.13M instances, filtering on any field walks every instance. The shape says "every field is a first-class filter" when in reality only a handful (`ncid`, `last_name`+`zip`, `county_id`, `party_cd`, `status_cd`) will ever be filtered on — and most access is by identity (`Voter/<ncid>`) and traversal anyway.
+**NC voters.** The shape declares 66 fields filterable; the indexed set is empty. At 9.13M instances, filtering on any field walks every instance. The shape says "every field is a first-class filter" when in reality only a handful (`ncid`, `last_name`+`zip`, `county_id`, `party_cd`, `status_cd`) will ever be filtered on — and most access is by identity (`voters/<ncid>`) and traversal anyway.
 
 **What "passes" looks like.** Split the shape (tells 1–4) until the filterable-field set is small and honest. For the split `Voter` (~20 fields), the real filter set is 5–7: `ncid` (identity), `last_name` and the canonical address fragment (matching), `county_id`/`party_cd`/`status_cd` (filtering), `registr_dt` (cohorts). Those few can be backed by indexed-field entries and the shape can mean what it says. **Decision rule:** if a shape declares more than ~10 fields filterable on a >1M-instance population, the fix is to slim the shape (find the hidden entities), not to declare more filters.
 
@@ -159,7 +159,7 @@ Split when it's a genuine entity, cold-path, or read once-per-matched-thing. Inl
 
 Starting from the 66-field `Voter` shape, the entity-split design is four shapes:
 
-### `Voter` — slim core (~20 fields). Stays addressable as `Voter/<ncid>`.
+### `Voter` — slim core (~20 fields). Stays addressable as `voters/<ncid>`.
 
 ```
 ncid, first_name, middle_name, last_name, name_suffix_lbl,
@@ -175,7 +175,7 @@ precinctWref                                   // → Precinct (tell 3 split)
 
 Matching workload still hits one shape; the matching-critical fields (`last_name`, `birth_year`, address) stay inline.
 
-### `Precinct` — keyed `Precinct/<county_id>-<precinct_abbrv>`, ~2,800 instances.
+### `Precinct` — keyed `precincts/<county_id>-<precinct_abbrv>`, ~2,800 instances.
 
 ```
 county_id, countyWref,
@@ -245,7 +245,7 @@ After the split:
 - "All voters in NC House 049" → query `DistrictAssignment` by `nc_house=049`, follow refs to `Precinct`, then inbound refs to `Voter`. Traversal hops instead of a 9.13M-instance scan.
 - "All precincts in Wake County" → `County` inbound `Precinct` refs.
 - "What districts does this voter vote in?" → `Voter` → `Precinct` → `DistrictAssignment`.
-- A downstream consumer repo's `DonorEntity` wrefs still target `Voter/<ncid>` — stable identity is preserved across the migration.
+- A downstream consumer repo's `DonorEntity` wrefs still target `voters/<ncid>` — stable identity is preserved across the migration.
 
 ---
 
@@ -294,9 +294,9 @@ In those cases the field-level audit is the symptom; the cure is at the fingerpr
 
 Width changes are shape migrations. On a populated graph, slimming a shape from 66 fields to 20 + birthing 3 new shared shapes is a non-trivial retract-and-replay operation. The discipline lives in [`migrations.md`](../../build-warmhub-repo/references/migrations.md), but two specifics:
 
-1. **Split-out entities need stable deterministic names from the start.** `Precinct/<county_id>-<precinct_abbrv>` survives re-ingest cleanly because the seed was in the source data all along. UUID-named split-out shapes don't survive re-ingest — every replay mints a new UUID and the wrefs on `Voter` rot.
+1. **Split-out entities need stable deterministic names from the start.** `precincts/<county_id>-<precinct_abbrv>` survives re-ingest cleanly because the seed was in the source data all along. UUID-named split-out shapes don't survive re-ingest — every replay mints a new UUID and the wrefs on `Voter` rot.
 
-2. **Migrating the wref-bearing field is the cascade hazard.** Every `Voter` that carried 28 precinct fields now needs a `precinctWref` instead. The migration writes the 2,800 Precinct + DistrictAssignment things first, then revises every Voter to swap the fat fields for the wref. Both stages are append-only; the v1 `Voter` shape is retracted, not deleted; downstream consumers holding wrefs to `Voter/<ncid>` still resolve because `ncid` identity is preserved across the v1 → v2 revision.
+2. **Migrating the wref-bearing field is the cascade hazard.** Every `Voter` that carried 28 precinct fields now needs a `precinctWref` instead. The migration writes the 2,800 Precinct + DistrictAssignment things first, then revises every Voter to swap the fat fields for the wref. Both stages are append-only; the v1 `Voter` shape is retracted, not deleted; downstream consumers holding wrefs to `voters/<ncid>` still resolve because `ncid` identity is preserved across the v1 → v2 revision.
 
 ---
 

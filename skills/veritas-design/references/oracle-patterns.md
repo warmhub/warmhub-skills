@@ -1,6 +1,6 @@
 # Oracle Patterns
 
-Use `Oracle/*` Things for sources that represent ground truth or authoritative adjudication. Oracles are not ordinary high-reputation sources.
+Use Things whose Shapes include `Oracle` (it declares `Oracle` or a Shape that composes it) for sources that represent ground truth or authoritative adjudication. This guide names them under `oracles/`; the name does not make a source an oracle, the Shape does. Oracles are not ordinary high-reputation sources.
 
 ## When To Use An Oracle
 
@@ -22,12 +22,14 @@ Do not use an oracle for:
 
 Prefer one oracle per question domain:
 
-- `Oracle/test-runner/unit-suite`
-- `Oracle/github/check-run`
-- `Oracle/sports/final-score-feed`
-- `Oracle/human-adjudication/security-review`
+- `oracles/test-runner/unit-suite`
+- `oracles/github/check-run`
+- `oracles/sports/final-score-feed`
+- `oracles/human-adjudication/security-review`
 
-Avoid one global `Oracle/ground-truth` if it mixes unrelated domains. A global oracle makes ownership, failure handling, and audit trails too broad.
+Each declares `Oracle`, or a Shape that composes it, in `shapes`; the `oracles/` prefix is a naming convention.
+
+Avoid one global `oracles/ground-truth` if it mixes unrelated domains. A global oracle makes ownership, failure handling, and audit trails too broad.
 
 ## Opinion Design
 

@@ -92,7 +92,7 @@ Add `.env.example`:
 
 ```bash
 WARMHUB_API_URL=https://api.warmhub.ai
-WARMHUB_REPO=example/repo
+WARMHUB_GRAPH=example/repo
 WH_TOKEN=
 ```
 
@@ -101,7 +101,7 @@ WH_TOKEN=
 For Framework:
 
 1. Fetch WarmHub with a data loader such as `src/data/warmhub-summary.json.js`.
-2. Read `WARMHUB_API_URL`, `WARMHUB_REPO`, and `WH_TOKEN` from build/deploy environment variables.
+2. Read `WARMHUB_API_URL`, `WARMHUB_GRAPH`, and `WH_TOKEN` from build/deploy environment variables.
 3. Output only the public-safe JSON/CSV needed by the page.
 4. Load the generated file in pages with `FileAttachment`.
 5. Treat the generated file as public if the app is public.
@@ -123,14 +123,14 @@ import "dotenv/config";
 import { WarmHubClient } from "@warmhub/sdk-ts";
 
 const apiUrl = process.env.WARMHUB_API_URL || "https://api.warmhub.ai";
-const repoSlug = process.env.WARMHUB_REPO;
+const repoSlug = process.env.WARMHUB_GRAPH;
 const token = process.env.WH_TOKEN;
 
-if (!repoSlug) throw new Error("WARMHUB_REPO is required");
+if (!repoSlug) throw new Error("WARMHUB_GRAPH is required");
 if (!token) throw new Error("WH_TOKEN is required");
 
-const [orgName, repoName] = repoSlug.split("/");
-if (!orgName || !repoName) throw new Error("WARMHUB_REPO must be org/repo");
+const [orgName, graphName] = repoSlug.split("/");
+if (!orgName || !graphName) throw new Error("WARMHUB_GRAPH must be org/graph");
 
 const client = new WarmHubClient({
   apiUrl,
@@ -138,9 +138,9 @@ const client = new WarmHubClient({
 });
 
 const [repo, stats, rows] = await Promise.all([
-  client.repo.get(orgName, repoName),
-  client.repo.getStats(orgName, repoName),
-  client.thing.queryAll(orgName, repoName, { max: 500 }),
+  client.graph.get(orgName, graphName),
+  client.graph.getStats(orgName, graphName),
+  client.thing.queryAll(orgName, graphName, { max: 500 }),
 ]);
 
 const stripVersion = (wref) =>
@@ -149,7 +149,7 @@ const stripVersion = (wref) =>
 const snapshot = {
   generatedAt: new Date().toISOString(),
   sourceRepo: repoSlug,
-  sourceUrl: `https://app.warmhub.ai/orgs/${orgName}/repos/${repoName}`,
+  sourceUrl: `https://app.warmhub.ai/orgs/${orgName}/graphs/${graphName}`,
   repo: {
     orgName: repo.orgName,
     name: repo.name,
@@ -189,7 +189,7 @@ const rows = data.rows;
 
 <section class="hero">
   <h1>${data.repo.displayName}</h1>
-  <a href="https://app.warmhub.ai/orgs/example/repos/repo" target="_blank" rel="noopener">Source data on WarmHub</a>
+  <a href="https://app.warmhub.ai/orgs/example/graphs/repo" target="_blank" rel="noopener">Source data on WarmHub</a>
 </section>
 ````
 
@@ -213,7 +213,7 @@ For Observable notebooks:
 - Deploy the built static site to GitHub Pages, Netlify, Vercel, Cloudflare Pages, or another static host.
 - Use scheduled CI builds when the WarmHub data should refresh automatically.
 - Keep `.env` out of git; use the host's secret/environment-variable mechanism for CI or production builds.
-- Configure `WARMHUB_API_URL`, `WARMHUB_REPO`, and `WH_TOKEN` as build-time variables, not browser-exposed runtime variables.
+- Configure `WARMHUB_API_URL`, `WARMHUB_GRAPH`, and `WH_TOKEN` as build-time variables, not browser-exposed runtime variables.
 
 ## Validation
 

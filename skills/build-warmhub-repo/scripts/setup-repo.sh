@@ -16,7 +16,7 @@ REPO="${2:?Usage: setup-repo.sh <org> <repo> [description]}"
 DESC="${3:-Data ingestion repo}"
 
 echo "Creating WarmHub repo: ${ORG}/${REPO}"
-if ! output=$(wh repo create "${ORG}/${REPO}" -d "${DESC}" --visibility private 2>&1); then
+if ! output=$(wh graph create "${ORG}/${REPO}" -d "${DESC}" --visibility private 2>&1); then
   if echo "$output" | grep -qi "already exists"; then
     echo "Repo already exists, continuing"
   else

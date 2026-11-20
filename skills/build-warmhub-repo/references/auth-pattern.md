@@ -58,7 +58,7 @@ Python uses the same `WH_TOKEN` convention through the SDK's explicit environmen
 from warmhub import WarmHubClient
 
 with WarmHubClient.from_env() as client:
-    repo = client.repository("<org>/<repo>")
+    graph = client.open_graph("<org>/<graph>")
 ```
 
 ## Webhook Delivery Payload
@@ -72,13 +72,13 @@ includes:
 | `traceId` | Trace identifier for the event chain |
 | `runId` | Action run identifier |
 | `subscriptionName` | Subscription name |
-| `repo` | `{ "orgName", "repoName" }` for a repo subscription, or `null` for an org event |
+| `graph` | `{ "orgName", "graphName" }` for a repo subscription, or `null` for an org event |
 | `callback_url` | Endpoint to report async progress / terminal outcome (prefer `repo:action-callback`; `repo:write` also permits it) |
 | `matchedOperations` | Operations matched by the subscription filter, or an empty array for a legacy cron delivery |
 
 Delivery headers include `X-WarmHub-Idempotency-Key` (stable across attempts), `X-WarmHub-Run-Id`,
 and `X-WarmHub-Attempt`. Standard Webhooks deliveries also carry `webhook-id` (the same stable
-delivery identity), `webhook-timestamp`, and `webhook-signature`. `repoSeq` is present in the body
+delivery identity), `webhook-timestamp`, and `webhook-signature`. `graphSeq` is present in the body
 only for commit-backed events; it is intentionally absent for legacy cron and metadata events.
 
 ### Authenticate The Raw Body Before Parsing
@@ -160,7 +160,7 @@ async function readDelivery(request: Request, secret: string) {
 Standard Webhooks headers are authoritative when present: a partial or failed Standard verification
 is a rejection, never a fallback to the native signature. Deduplicate durably on `webhook-id` (or,
 for native-only delivery, `X-WarmHub-Idempotency-Key`) before starting work; return a successful
-acknowledgement for a completed duplicate. Treat `repoSeq` as optional ordering metadata, never as
+acknowledgement for a completed duplicate. Treat `graphSeq` as optional ordering metadata, never as
 the delivery identity.
 
 ## Verifying Inbound Deliveries
@@ -169,9 +169,9 @@ Bind a credential set with `WEBHOOK_*` keys to the subscription so the platform 
 delivery and your handler can confirm the request is genuinely from WarmHub:
 
 ```bash
-wh credential create ingest-webhook --repo <org>/<repo>
-echo "<shared-secret>" | wh credential set ingest-webhook WEBHOOK_SIGNING_SECRET --repo <org>/<repo>
-wh sub bind <subscription-name> --credentials ingest-webhook --repo <org>/<repo>
+wh credential create ingest-webhook --graph <org>/<repo>
+echo "<shared-secret>" | wh credential set ingest-webhook WEBHOOK_SIGNING_SECRET --graph <org>/<repo>
+wh sub bind <subscription-name> --credentials ingest-webhook --graph <org>/<repo>
 ```
 
 Supported keys include:

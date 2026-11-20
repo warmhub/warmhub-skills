@@ -12,15 +12,15 @@
       "files": [],
       "purpose": "Baseline recall test. Fingerprint #11 (External-Proxy Analysis Graph) is the natural match for a ticket corpus. This prompt SHOULD produce a clean design — failing here would mean the skill can't even retrieve, let alone apply.",
       "assertions": [
-        {"text": "Design uses `about: \"Set/<name>\"` (named collection op first) for the duplicate-of relationship (symmetric)", "type": "auto"},
-        {"text": "Design uses `about: \"Arc/<name>\"` (named collection op first) for the blocks relationship (directional)", "type": "auto"},
+        {"text": "Design uses a collection Thing that declares `Bond` (a pairwise relation) or `Set` (an n-way group) in `shapes`, with the assertion's `data.about` set to its name, for the duplicate-of relationship (symmetric)", "type": "manual"},
+        {"text": "Design uses a collection Thing that declares `Arc` in `shapes`, with the assertion's `data.about` set to its name, for the blocks relationship (directional)", "type": "manual"},
         {"text": "TicketProxy is modeled as a Thing (entity with single canonical state), not as an assertion", "type": "manual"},
         {"text": "Design includes a content-addressed AnalyticalPolicy (or equivalent named shape) with policyWref bindings on expensive analytical assertions", "type": "manual"},
         {"text": "Design includes an anti-shapes / anti-queries section listing 'stale tickets', 'high-entropy', and 'needs triage' as derived queries, not durable shapes", "type": "manual"},
         {"text": "Question catalog uses [R] / [M] / [F] status markers and 'earns pressure for' attribution per the query-catalog-template format", "type": "auto"},
         {"text": "Design walks the convergence checkpoint explicitly (5 questions answered)", "type": "manual"},
         {"text": "Design correctly identifies fingerprint #11 (External-Proxy Analysis Graph) by name or by structurally-equivalent description", "type": "manual"},
-        {"text": "Design does NOT use `originalWref: string` or any flat-string-wref-field pattern to encode a relationship endpoint (the duplicate-assertion v1 anti-pattern explicitly avoided)", "type": "auto"},
+        {"text": "Design does NOT use `originalWref: string` or any flat-string-wref-field pattern to encode a relationship endpoint (the duplicate-assertion v1 anti-pattern explicitly avoided)", "type": "manual"},
         {"text": "Design caps ticket body bytes (e.g. bodyExcerpt with size limit) and points at the source system via sourceUrl rather than mirroring full body content", "type": "manual"}
       ]
     },
@@ -33,15 +33,15 @@
       "files": [],
       "purpose": "THE OVERFIT DETECTOR. Same fingerprint as prompt 1 (#11) but vocabulary doesn't trigger catalog name-match (no ticket corpus, no duplicate clusters). If the skill produces a design with the same Arc/Bond choices, content-addressed policy, anti-shapes section, and question catalog format — principles transferred. If it produces something noticeably worse, name-matching was doing more work than principle-application.",
       "assertions": [
-        {"text": "Design uses `about: \"Set/<name>\"` (named collection op first) for the same-underlying-vulnerability relationship (symmetric — A is same as B is same as A)", "type": "auto"},
-        {"text": "Design uses `about: \"Arc/<name>\"` (named collection op first, or analogous) for the exploited-in / caused-by relationship (directional)", "type": "auto"},
+        {"text": "Design uses a collection Thing that declares `Bond` (a pairwise relation) or `Set` (an n-way group) in `shapes`, with the assertion's `data.about` set to its name, for the same-underlying-vulnerability relationship (symmetric — A is same as B is same as A)", "type": "manual"},
+        {"text": "Design uses a collection Thing that declares `Arc` in `shapes`, with the assertion's `data.about` set to its name (or analogous), for the exploited-in / caused-by relationship (directional)", "type": "manual"},
         {"text": "Vulnerability reports / canonical vulnerabilities / incidents are modeled as external-proxy Things, not as assertions", "type": "manual"},
         {"text": "Design includes content-addressed analytical-policy shape bound to dedupe-across-sources verdicts (expensive derivation justifies it per D3)", "type": "manual"},
         {"text": "Design lists 'triage queue' and 'blast radius' as derived queries, not as durable shapes (no TriageItem/BlastRadiusScore shape)", "type": "manual"},
         {"text": "Question catalog present with [R/M/F] status markers and earns-pressure-for attribution", "type": "auto"},
         {"text": "Design correctly identifies fingerprint #11 (External-Proxy Analysis Graph) — proves the skill can match by structure, not just by vocabulary", "type": "manual"},
         {"text": "OVERFIT DETECTION: design's shape skeleton is structurally similar to prompt 1's (same number of relationship arities, same content-addressed-policy pattern, same anti-shapes discipline) but uses domain-specific names with no carry-over of `TicketProxy`, `TicketCluster`, etc.", "type": "manual"},
-        {"text": "Design does NOT use `originalWref: string` or any flat-string-wref-field pattern to encode a relationship endpoint", "type": "auto"},
+        {"text": "Design does NOT use `originalWref: string` or any flat-string-wref-field pattern to encode a relationship endpoint", "type": "manual"},
         {"text": "Design walks the convergence checkpoint explicitly (5 questions answered)", "type": "manual"},
         {"text": "Universal foundations addressed: hierarchical names, descriptions, append-only revision, mirrored convenience fields where collection targets are used, D9 stack position answered", "type": "manual"}
       ]
@@ -60,9 +60,9 @@
         {"text": "Design articulates the interface shape(s) bridging the per-channel proxy layer and the theme-synthesis layer (per the layered-co-fingerprints pattern in catalog)", "type": "manual"},
         {"text": "Channel-specific feedback (FeedbackProxy or per-channel subtypes) modeled as external proxies — Things, not assertions", "type": "manual"},
         {"text": "Theme synthesis uses content-addressed AnalyticalPolicy / ClusteringPolicy shape (D3=expensive)", "type": "manual"},
-        {"text": "Cross-channel duplicate-complaint relationship uses `about: \"Set/<name>\"` (named collection op first, symmetric)", "type": "auto"},
-        {"text": "Blocker relationship uses `about: \"Arc/<name>\"` (named collection op first, directional)", "type": "auto"},
-        {"text": "Theme-membership uses `about: \"Arc/<name>\"` or analogous Arc (named collection op first, with mirrored convenience fields)", "type": "auto"},
+        {"text": "Cross-channel duplicate-complaint relationship uses a collection Thing that declares `Bond` (a pairwise relation) or `Set` (an n-way group) in `shapes`, with the assertion's `data.about` set to its name (symmetric)", "type": "manual"},
+        {"text": "Blocker relationship uses a collection Thing that declares `Arc` in `shapes`, with the assertion's `data.about` set to its name (directional)", "type": "manual"},
+        {"text": "Theme-membership uses a collection Thing that declares `Arc` in `shapes`, with the assertion's `data.about` set to its name, or an analogous Arc, with mirrored convenience fields", "type": "manual"},
         {"text": "Investment-priority-ranking is treated as a derived query (aggregation over Theme + complaint counts), NOT as a durable InvestmentRanking/PriorityShape shape", "type": "manual"},
         {"text": "Design does NOT collapse the layering by ignoring either pattern-mining or external-proxy aspects", "type": "manual"},
         {"text": "Design walks convergence checkpoint", "type": "manual"}
@@ -79,8 +79,8 @@
       "assertions": [
         {"text": "Design correctly does NOT pattern-match to ops-state-tracking (#4) despite messaging-platform vocabulary", "type": "manual"},
         {"text": "Design includes graph-synthesized concept (RecurringQuestionPattern, QuestionCluster, or similar) as a Thing — not just message proxies", "type": "manual"},
-        {"text": "Best-answer relationship uses `about: \"Arc/<name>\"` or analogous Arc (named collection op first, directional: answers-are-of)", "type": "auto"},
-        {"text": "Same-question relationship uses `about: \"Set/<name>\"` (named collection op first, symmetric)", "type": "auto"},
+        {"text": "Best-answer relationship uses a collection Thing that declares `Arc` in `shapes`, with the assertion's `data.about` set to its name, or an analogous Arc (directional: answers-are-of)", "type": "manual"},
+        {"text": "Same-question relationship uses a collection Thing that declares `Bond` (a pairwise relation) or `Set` (an n-way group) in `shapes`, with the assertion's `data.about` set to its name (symmetric)", "type": "manual"},
         {"text": "Design diagnoses fingerprint as a hybrid (pattern-mining + external-proxy + curation), not a single match", "type": "manual"},
         {"text": "MessageProxy / ThreadProxy treated as external proxies (Things with stable Slack message id), not as assertions or as bytes the graph owns", "type": "manual"},
         {"text": "Design includes content-addressed policy shape if pattern-recognition / question-clustering uses expensive derivation", "type": "manual"},
@@ -98,7 +98,7 @@
       "purpose": "Edge-type-as-load-bearing variant test. Literature-review fingerprint exists in catalog but its example (ClaimBasis as a uniform Arc edge) doesn't model edge-kind diversity. Tests whether the skill recognizes the variant and adapts the design rather than porting ClaimBasis verbatim. Also tests centrality-as-derived-query discipline.",
       "assertions": [
         {"text": "Design extends literature-review fingerprint with typed-edge-kind discipline — either distinct assertion shapes per kind, or a single shape with a typed kind enum whose semantics are described", "type": "manual"},
-        {"text": "Citation relationships use Arc-targeted `about` regardless of kind (not flat string fields for cited-case)", "type": "auto"},
+        {"text": "Citation relationships use Arc-targeted `about` regardless of kind (not flat string fields for cited-case)", "type": "manual"},
         {"text": "Centrality (most-cited) is treated as a derived query over CitationAssertions, NOT as a precomputed `centralityScore: number` on the case Thing", "type": "manual"},
         {"text": "Doctrinal-line evolution is described as a graph traversal (walk through citations across time), not as a synthesized DoctrinalLine Thing or assertion", "type": "manual"},
         {"text": "Inconsistent-precedent detection is a derived query (find cases where Affirms-of-X and Overturns-of-X coexist), not a stored Inconsistency assertion", "type": "manual"},
@@ -111,11 +111,11 @@
   ],
 
   "auto_assertion_grading_hints": {
-    "auto_pattern_about_set": "Output contains the substring `about: \"Set/` or `about: 'Set/` (named collection op referenced by name; regex with optional whitespace).",
-    "auto_pattern_about_arc": "Output contains the substring `about: \"Arc/` or `about: 'Arc/` (named collection op referenced by name).",
+    "auto_pattern_about_set": "Graded manually: a substring check cannot pair a `shapes` declaration with a `data.about`. Output declares a Thing with `Set` in its `shapes` (for example `\"shapes\": [\"Set\"]`), and an assertion whose `data.about` is that Thing's name. A name that starts with `Set/` does not count: the name prefix never sets the Shape.",
+    "auto_pattern_about_arc": "Graded manually: a substring check cannot pair a `shapes` declaration with a `data.about`. Output declares a Thing with `Arc` in its `shapes` (for example `\"shapes\": [\"Arc\"]`), and an assertion whose `data.about` is that Thing's name. A name that starts with `Arc/` does not count: the name prefix never sets the Shape.",
     "auto_pattern_question_catalog_status": "Output contains `[R]`, `[M]`, or `[F]` status markers in a query catalog context.",
     "auto_pattern_earns_pressure": "Output contains the phrase `Earns pressure for:` or `earns pressure for`.",
-    "auto_pattern_no_flat_string_wref": "Output does NOT contain a pattern like `<endpointName>Wref: string` (e.g. `originalWref: string`, `blockerWref: string`) used to encode a relationship endpoint as a flat field. Detection: regex match for `[A-Za-z]+Wref\\s*:\\s*string` followed by absence of a corresponding named-collection reference `about: \"(Arc|Bond|Set|List)/` — failure if found WITH no Arc/Bond/Set/List target on the same shape.",
+    "auto_pattern_no_flat_string_wref": "Graded manually: a substring check cannot pair a `shapes` declaration with a `data.about`. Output does NOT contain a pattern like `<endpointName>Wref: string` (e.g. `originalWref: string`, `blockerWref: string`) used to encode a relationship endpoint as a flat field. Detection: regex match for `[A-Za-z]+Wref\\s*:\\s*string` followed by absence of an `about` that names a Thing declaring `Arc`, `Bond`, `Set` or `List` in its Shapes — failure if found WITH no such collection target on the same shape.",
     "auto_pattern_anti_shapes_section": "Output contains a section heading or list explicitly labeled 'anti-shapes', 'queries not shapes', 'derived queries', or equivalent."
   },
 

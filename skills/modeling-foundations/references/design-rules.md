@@ -74,21 +74,21 @@ A real example. A consumer's topology spec asserted, verbatim: *"cross-repo `abo
 
 ```bash
 ORG=<throwaway-org>                              # a scratch org/profile
-wh repo create $ORG/probe-a -P dev
-wh repo create $ORG/probe-b -P dev
+wh graph create $ORG/probe-a -P dev
+wh graph create $ORG/probe-b -P dev
 
 # target thing in A; in B, a thing whose shape declares `link` as a wref field,
 # pointing cross-repo at A's target:
-wh commit submit --repo $ORG/probe-a -P dev -m probe \
+wh commit submit --graph $ORG/probe-a -P dev -m probe \
   --ops '[{"operation":"add","name":"t1","shapes":["Target"],"data":{}}]'
-wh commit submit --repo $ORG/probe-b -P dev -m probe \
+wh commit submit --graph $ORG/probe-b -P dev -m probe \
   --ops '[{"operation":"add","name":"c1","shapes":["Consumer"],"data":{"link":"wh:'"$ORG"'/probe-a/t1"}}]'
 
 # reverse traversal from the TARGET's repo — the two indexes diverge here:
-wh thing about t1 --repo $ORG/probe-a -P dev          # about-index: repo-local — returns 0, won't see B
-wh thing refs  t1 --inbound --repo $ORG/probe-a -P dev # refs-index: fans out cross-repo — returns c1
+wh thing about t1 --graph $ORG/probe-a -P dev          # about-index: repo-local — returns 0, won't see B
+wh thing refs  t1 --inbound --graph $ORG/probe-a -P dev # refs-index: fans out cross-repo — returns c1
 
-wh repo archive $ORG/probe-a -P dev ; wh repo archive $ORG/probe-b -P dev   # tear down
+wh graph archive $ORG/probe-a -P dev ; wh graph archive $ORG/probe-b -P dev   # tear down
 ```
 
 Substitute whatever mechanism you're unsure about: write a cross-repo `about` and see whether it's rejected; declare a field type and see whether it validates; revise a referenced shape and see what form the wref resolves to. The *observed result* — not a remembered constraint — drives the design. This pairs directly with the four-direction test's repo-boundary note ([`primitives.md` § The four-direction test across a repo boundary](primitives.md)): the test's object-side answer depends on platform scope behavior, so verify the behavior before concluding a relationship "isn't traversable."
@@ -118,7 +118,7 @@ A name is not a label — it **is** the thing's identity, and its shape is the p
 interface two audiences use to navigate the graph: **humans visually reconstruct
 structure from names** (a `/`-delimited hierarchy reads like a filesystem; flat opaque
 names read like a hash dump), and **humans and agents query by name prefix** (a coherent
-hierarchy turns the name space into a free glob index — `QualityFinding/<org>/<repo>/pull/142/*`
+hierarchy turns the name space into a free glob index — `findings/<org>/<repo>/pull/142/*`
 returns every finding on one PR with no field scan). Naming rigor is therefore a
 first-class design activity, not a formatting pass. This section is the summary; the
 full treatment — with worked example, the convergence/one-authority discipline, and a
@@ -127,7 +127,12 @@ checklist — is in [naming.md](../../design-warmhub-repo/references/naming.md).
 Use hierarchical names so that identity is visible and every prefix is a meaningful set.
 
 Good names should be:
-- Stable across revisions (a rename is a retract-and-replay migration, not an edit).
+- Stable across revisions. A Thing can be renamed with `wh thing rename <name> <newName>`.
+  Stored references (`about` and wref fields) hold durable ids, so they keep working after
+  a rename. The old name stops resolving, though: wref text kept outside the graph, such as
+  docs, configs and other repos, breaks, and a producer that still computes the old
+  deterministic name will mint a second Thing instead of updating the first. Choose stable
+  names before others depend on them.
 - Readable in query output without extra lookup — hand someone one wref and they can
   say what it is and where it sits.
 - Scoped by domain or source, broadest segment first, with `/` as the structural
@@ -139,26 +144,35 @@ Good names should be:
   describe the same real-world entity must compute the *same* name; anything that
   varies between them is metadata, not identity.
 - Free of mutable state (queue rank, current priority, current certainty, "needs review").
+- **One prefix per kind.** Start each name with a lowercase plural prefix for its kind of
+  record (`claims/`, `papers/`, `claim-bases/`). The prefix is a naming convention only:
+  a name's first segment does not select a Shape, and each write states its Shapes in
+  `shapes`. Names are unique across the repository, whatever the Shape, so a claim and
+  the basis assertion about it cannot share a name; separate prefixes keep them apart.
+  Shapes are Things named `hub/shapes/<Name>`, and the `hub/` prefix is reserved for them.
 
-**Useful patterns.**
-- `<Shape>/<stable-id>`
-- `<Shape>/<source-kind>-<source-id>`
-- `<AssertionShape>/<review-or-import-batch>/<target-id>/<source-id>`
-- `<EventShape>/<event-kind>-<target-id>`
+**Useful patterns.** `<kind>` is the lowercase plural prefix for one kind of record.
+- `<kind>/<stable-id>`
+- `<kind>/<source-kind>-<source-id>`
+- `<assertion-kind>/<review-or-import-batch>/<target-id>/<source-id>`
+- `<event-kind>/<event-type>-<target-id>`
 
-**Examples (across fingerprints — names are illustrative).**
-- Literature review: `ReviewedClaim/gate2-claim-013`, `ExternalSourceReference/arxiv-2601.03192`, `ClaimBasis/gate4-gate2-claim-013/arxiv-2601.03192`.
-- Synthesize-and-test: `FiledDefectIssue/2266`, `Topic/canonical-read-access`, `BacktestResult/2266-static_analysis-5/v3`.
-- Governance: `Proposal/2026-eng-onboarding`, `Ratification/2026-eng-onboarding/v2`.
-- Ops: `ServiceProxy/prod-us-east-checkout`, `DeploymentEvent/checkout/sha-13bf9c2`.
+**Examples (across fingerprints — names are illustrative; the Shape each write declares is in parentheses).**
+- Literature review: `claims/gate2-claim-013` (`ReviewedClaim`), `papers/arxiv-2601.03192` (`ExternalSourceReference`), `claim-bases/gate4-gate2-claim-013/arxiv-2601.03192` (`ClaimBasis`).
+- Synthesize-and-test: `defect-issues/2266` (`FiledDefectIssue`), `topics/canonical-read-access` (`Topic`), `backtests/2266-static_analysis-5/v3` (`BacktestResult`).
+- Governance: `proposals/2026-eng-onboarding` (`Proposal`), `ratifications/2026-eng-onboarding/v2` (`Ratification`).
+- Ops: `services/prod-us-east-checkout` (`ServiceProxy`), `deployments/checkout/sha-13bf9c2` (`DeploymentEvent`).
 
 **Avoid.**
-- `Claim/1`, `Thing/new`, `ReviewTarget/rank-1`, `Claim/needing-support`.
+- `claims/1`, `things/new`, `review-targets/rank-1`, `claims/needing-support`.
 - Names that duplicate mutable certainty, queue state, or review status.
+- A Shape name as the first segment (`ReviewedClaim/gate2-claim-013`). It reads as if it
+  set the Shape, and it does not.
+- One prefix shared by two kinds of record, which makes their names collide.
 
 If two stable names exist, prefer the one that makes graph output understandable to a reader who has only the wref.
 
-**Sample-friendly naming.** Where a shape is expected to have many instances *and* downstream consumers may want to operate on stratified subsets without enumerating the full shape, prefer deterministic names from known stable seeds. `<Shape>/<seed>/<suffix>` is sample-friendly; `<Shape>/<uuid>` is not.
+**Sample-friendly naming.** Where a shape is expected to have many instances *and* downstream consumers may want to operate on stratified subsets without enumerating the full shape, prefer deterministic names from known stable seeds. `<kind>/<seed>/<suffix>` is sample-friendly; `<kind>/<uuid>` is not.
 
 The sample-first analytical workflow reduces to: build a list of seed IDs, construct the deterministic wrefs, batch-fetch. This only works if names are predictable from the seed. The cost gap is large in practice — a batch fetch of 1,000 instances with deterministic names completes in two calls (seconds); an equivalent full-scan enumeration is hours.
 
@@ -166,7 +180,7 @@ Use opaque names (UUIDs, hashes, sequence numbers) only when no stable seed exis
 
 **Leaf by semantics.** Choose the narrowest segment by the entity's identity: a 1:1-unique source id (a comment id) keeps cross-system crosswalks deterministic; a content hash of the defining fields makes a recurring entity collapse to one node so *recurrence is derived from the name, not stored as a flag*.
 
-**Content-addressed boundaries are `/`-segments, not version pins.** When a thing is versioned by content (a policy, an eval spec), append the content hash as a name segment (`QualityPolicy/standard-gate/sha256-…`), never with `@` (reserved for wref version pins and rejected inside a thing-name segment). Old verdicts under the prior hash stay valid history, and staleness is visible in the name.
+**Content-addressed boundaries are `/`-segments, not version pins.** When a thing is versioned by content (a policy, an eval spec), append the content hash as a name segment (`policies/standard-gate/sha256-…`), never with `@` (reserved for wref version pins and rejected inside a thing-name segment). Old verdicts under the prior hash stay valid history, and staleness is visible in the name.
 
 **One naming authority.** Build names in exactly one place every producer calls — a shared naming function, or a written contract every importer follows verbatim — with input canonicalization *inside* it so variant spellings of one entity (`cart.ts`, `src/cart.ts`, `web/src/cart.ts`) converge to one node. Without this, each lane forks identity silently and the four-direction test still passes on each fork. See [naming.md](../../design-warmhub-repo/references/naming.md) for the worked example.
 
@@ -289,7 +303,7 @@ A frequent over-fear: "writing a derived metric back into the graph means a retr
 | **2** | The derived *population* changes between runs — some instances should no longer exist | retract the dropped instances + add the new ones (**instance-level** retract-and-replay) | Moderate — still append-only; `revise` alone can't remove an instance whose cause dropped out |
 | **3** | The shape or the `about` arity changes | retract-and-replay **with dependent cascade** | Expensive — this is the [`migrations.md`](../../build-warmhub-repo/references/migrations.md) case |
 
-Most write-back is tier 1 or tier 2, not tier 3. A derived metric with a **deterministic name** and `about: <single thing>` refreshes in place with `revise` (tier 1) — no retract, no collection dance. A consensus value named `ConsensusBelief/<event>-<cause>` with `about: <event>` is refreshed by its upstream job purely through `revise`; nothing is retracted unless the *cause itself* drops out of the population (then it's tier 2 — retract that one instance).
+Most write-back is tier 1 or tier 2, not tier 3. A derived metric with a **deterministic name** and `data.about: <single thing>` refreshes in place with `revise` (tier 1) — no retract, no collection dance. A consensus value named `consensus-beliefs/<event>-<cause>` with `about: <event>` is refreshed by its upstream job purely through `revise`; nothing is retracted unless the *cause itself* drops out of the population (then it's tier 2 — retract that one instance).
 
 The design levers that keep you on the cheap tiers: **deterministic names** (a refresh reuses the same identity → tier 1) and **single-thing `about` where the relationship genuinely has one subject** (so a value change isn't a collection retract-replay). If a recompute *feels* like it forces tier 3, check whether the name is non-deterministic or the `about` arity is heavier than the relationship needs — that mis-design, not append-only itself, is usually the real cost. (For cross-repo links, retract-and-replay also cascades through the inbound wref fields that target the retracted instance — see [`cross-repo-linkage.md`](cross-repo-linkage.md) § Lifecycle & orphan policy prompts.)
 

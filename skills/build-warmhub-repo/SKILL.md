@@ -21,7 +21,7 @@ and ingestion plan are known. The output is an implementation project that:
 4. Commits in batches with dedup and conflict handling
 5. Runs QC checks that produce Assessment assertions
 6. Supports local dev and automated execution with an explicit `WH_TOKEN` PAT provider
-7. Publishes matching root `README.md` and `AGENTS.md` files as first-class repo content
+7. Publishes matching root `README.md` and `AGENTS.md` files as first-class graph content
 8. Records an explicit repository-license choice or an explicit decision to remain undeclared
 9. Supports webhook subscriptions and externally scheduled ingest and QC
 
@@ -94,8 +94,8 @@ After creating the project-local CLI described in Step 7, create the repository 
 These invoke code in the generated project, not the `wh` CLI:
 
 ```bash
-wh repo create <org>/<repo> -d "initial" --visibility private
-wh token create --name my-data-ingest --scope <org>/<repo>=repo:write --expires 90d
+wh graph create <org>/<graph> -d "initial" --visibility private
+wh token create --name my-data-ingest --scope <org>/<graph>=repo:write --expires 90d
 export WH_TOKEN="<token-from-command>"
 ```
 
@@ -116,18 +116,18 @@ python -m repo_ingest.cli qc --latest
 
 ```bash
 # Draft, publish, and read back repository documentation
-wh repo content prompt <org>/<repo> --kind readme
-wh repo content prompt <org>/<repo> --kind agents
+wh graph content prompt <org>/<graph> --kind readme
+wh graph content prompt <org>/<graph> --kind agents
 # Draft root README.md and AGENTS.md from those prompts plus source/conversation context.
-wh repo content set <org>/<repo> --kind readme --file README.md
-wh repo content set <org>/<repo> --kind agents --file AGENTS.md
-wh repo content get <org>/<repo> --kind readme
-wh repo content get <org>/<repo> --kind agents
+wh graph content set <org>/<graph> --kind readme --file README.md
+wh graph content set <org>/<graph> --kind agents --file AGENTS.md
+wh graph content get <org>/<graph> --kind readme
+wh graph content get <org>/<graph> --kind agents
 # Inspect license state, then follow the licensing reference for a confirmed choice or defer
-wh repo describe <org>/<repo> --json
+wh graph describe <org>/<graph> --json
 # Configure automated runs
 # Event-driven: create a webhook subscription. Scheduled: have an external scheduler call <handler-url>.
-wh sub create source-events --repo <org>/<repo> --on SourceRecord --kind webhook --webhook-url <handler-url>
+wh sub create source-events --graph <org>/<graph> --on SourceRecord --kind webhook --webhook-url <handler-url>
 ```
 
 </quick_start>
@@ -191,12 +191,12 @@ wh auth login
 After creating the target repo, create its scoped token:
 
 ```bash
-wh token create --name my-data-ingest --scope <org>/<repo>=repo:write --expires 90d
+wh token create --name my-data-ingest --scope <org>/<graph>=repo:write --expires 90d
 export WH_TOKEN="<token-from-command>"
 ```
 
 Follow [references/project-structure.md](references/project-structure.md) for layout and dependencies.
-TypeScript uses ESNext modules with bundler resolution. Python requires 3.10+ and uses
+TypeScript uses ESNext modules with bundler resolution. Python requires 3.11+ and uses
 `WarmHubClient.from_env()` for `WH_TOKEN` authentication.
 
 Keep generated repositories agent-neutral by default. Root `AGENTS.md` is portable repo operating
@@ -250,7 +250,7 @@ Key concepts:
   `--skip-existing` for bulk adds, retain exact receipts, and stop to recover a receipt after an
   ambiguous transport outcome. See `operations-guide.md`.
 - **Local-green is not live-green**: after shape setup, write a representative 100-1000 row toy slice
-  before any large ingest. Verify per-shape counts, `wh repo describe`, and the load-bearing
+  before any large ingest. Verify per-shape counts, `wh graph describe`, and the load-bearing
   traversals/readbacks the design promised.
 
 ## Step 6: Implement QC Checks
@@ -280,7 +280,7 @@ handler's ingest or QC route directly.
 Create the repo, then run its project-local CLI:
 
 ```bash
-wh repo create <org>/<repo> -d "initial repo" --visibility private
+wh graph create <org>/<graph> -d "initial repo" --visibility private
 ```
 
 ```bash
@@ -303,8 +303,8 @@ python -m repo_ingest.cli qc --latest
 Read back representative records before reporting success:
 
 ```bash
-wh thing query --repo <org>/<repo> --shape <DurableThing> --limit 3 --json
-wh thing query --repo <org>/<repo> --shape <KeyAssertion> --limit 3 --json
+wh thing query --graph <org>/<graph> --shape <DurableThing> --limit 3 --json
+wh thing query --graph <org>/<graph> --shape <KeyAssertion> --limit 3 --json
 ```
 
 If repo creation, shape setup, commit, or readback is blocked by credentials, CLI capability, or
@@ -323,7 +323,7 @@ node scripts/verify-relationships.mjs --manifest .warmhub-builder/project-state.
 After the first bounded ingest creates assertion instances, run the live check:
 
 ```bash
-node scripts/verify-relationships.mjs --repo <org>/<repo> --sample-size 10
+node scripts/verify-relationships.mjs --graph <org>/<graph> --sample-size 10
 ```
 
 If either check fails before meaningful data is loaded, return to `design-warmhub-repo` for
@@ -352,20 +352,20 @@ sync:
 
 ```bash
 # Gather drafting context from the populated repo.
-wh repo content prompt <org>/<repo> --kind readme
-wh repo content prompt <org>/<repo> --kind agents
+wh graph content prompt <org>/<graph> --kind readme
+wh graph content prompt <org>/<graph> --kind agents
 
 # Draft or revise these exact root files using the prompts plus build/source context.
 #   README.md
 #   AGENTS.md
 
 # Publish each file to its matching first-class content thing.
-wh repo content set <org>/<repo> --kind readme --file README.md
-wh repo content set <org>/<repo> --kind agents --file AGENTS.md
+wh graph content set <org>/<graph> --kind readme --file README.md
+wh graph content set <org>/<graph> --kind agents --file AGENTS.md
 
 # Read both values back; compare each response with its matching local file.
-wh repo content get <org>/<repo> --kind readme
-wh repo content get <org>/<repo> --kind agents
+wh graph content get <org>/<graph> --kind readme
+wh graph content get <org>/<graph> --kind agents
 ```
 
 Do not finish the stage until `Readme` matches `README.md` and `Agents` matches
@@ -373,7 +373,7 @@ Do not finish the stage until `Readme` matches `README.md` and `Agents` matches
 
 ## Step 9a: Confirm and Verify the Repository License
 
-Follow [references/licensing.md](references/licensing.md). Start with `wh repo describe`, preserve an
+Follow [references/licensing.md](references/licensing.md). Start with `wh graph describe`, preserve an
 existing declaration unless the user explicitly confirms replacement, and never infer a default or
 claim legal suitability. An explicit decision to remain undeclared is valid and makes no write.
 
@@ -382,7 +382,7 @@ For a confirmed write, inspect the exact native instance state and use only the 
 instance exists, add the subject and declaration atomically so the native shapes materialize
 lazily. Resolve a single SPDX identifier to a canonical pinned wref; preserve compound
 `OR` / `AND` / `WITH` expressions without a false `licenseWref`. Guard revisions with the current
-version, then verify the exact instances, `wh repo describe`, public-repo doctor output, the UI
+version, then verify the exact instances, `wh graph describe`, public-repo doctor output, the UI
 badge/panel when available, and README/root `LICENSE` alignment.
 
 ## Step 10: Set Up Automation
@@ -393,7 +393,7 @@ GitHub Actions, Cloud Scheduler, or system cron) to call the handler directly.
 
 ```bash
 wh sub create source-events \
-  --repo <org>/<repo> \
+  --graph <org>/<graph> \
   --on SourceRecord \
   --kind webhook \
   --webhook-url https://<your-handler-host>/events
@@ -406,12 +406,12 @@ do not downgrade to native signature verification. Authenticate the external sch
 handler's own access controls:
 
 ```bash
-wh credential create ingest-webhook --repo <org>/<repo>
-echo "<shared-secret>" | wh credential set ingest-webhook WEBHOOK_SIGNING_SECRET --repo <org>/<repo>
-wh sub bind source-events --credentials ingest-webhook --repo <org>/<repo>
+wh credential create ingest-webhook --graph <org>/<graph>
+echo "<shared-secret>" | wh credential set ingest-webhook WEBHOOK_SIGNING_SECRET --graph <org>/<graph>
+wh sub bind source-events --credentials ingest-webhook --graph <org>/<graph>
 ```
 
-Verify: `wh sub list --repo <org>/<repo>`
+Verify: `wh sub list --graph <org>/<graph>`
 
 ## Step 11: Prepare Final Repo Handoff
 
@@ -440,8 +440,9 @@ fields when this is the terminal stage; otherwise include them in the next-step 
   wref of an existing thing, such as `data-ingest`
 - **Assertion `about` field** — required on `add`, omitted on `revise`
 - **Collection `about` values** — `about` accepts a wref only; inline `{ "arc": [...] }` / `{ "bond": [...] }`
-  objects are rejected. Emit the collection as its own named `add` op (`kind: "collection"`, `type`,
-  `members`) first, then point the assertion's `about` at the resulting `Arc/…` / `Bond/…` / `Set/…` wref. Use a
+  objects are rejected. Emit the collection as its own named ordinary Thing `add` first (for example
+  `{"operation":"add","name":"a-to-b","shapes":["Arc"],"data":{"from":"a","to":"b"}}`, or `"shapes":["Bond"]`
+  with `"data":{"ends":[…]}`), then point the assertion's `about` at that Thing's wref. Use a
   deterministic, member-derived collection name so re-runs and `--skip-existing` stay replay-safe
 - **Version-pinned wrefs** — `@vN` reads a historical target by design; do not use pinned examples as
   proof that HEAD re-resolution works
@@ -451,7 +452,7 @@ fields when this is the terminal stage; otherwise include them in the next-step 
   guarantee a later write; retain real-write receipts and stop for exact receipt recovery after an
   ambiguous transport result
 - **Do not cargo-cult old Convex-era batch limits** — returned WarmHub supports larger commit workflows; use semantic commit planning or `wh-commit-design` instead of hard-coding `200 ops per commit`
-- **Do not cross-wire repo content files** — publish root `README.md` only as `--kind readme` and root
+- **Do not cross-wire graph content files** — publish root `README.md` only as `--kind readme` and root
   `AGENTS.md` only as `--kind agents`; run both `get` commands and compare the readbacks before handoff
 - **License choice is human-owned** — never select a default, claim suitability, synthesize
   attribution, or replace an existing declaration without explicit confirmation; undeclared is valid
@@ -478,7 +479,7 @@ Return:
 - The repo can create or update shapes, ingest one bounded slice, and run QC locally.
 - The target WarmHub repo exists, the first bounded ingest has been committed to WarmHub, and
   representative facts have been read back from WarmHub.
-- Root `README.md` and `AGENTS.md` exist, are written to their matching repo content kinds, and both
+- Root `README.md` and `AGENTS.md` exist, are written to their matching graph content kinds, and both
   readbacks match the local files.
 - The user explicitly chose a declaration or explicitly deferred; a declaration passes the licensing
   reference's machine, UI-when-available, README, and root `LICENSE` checks.

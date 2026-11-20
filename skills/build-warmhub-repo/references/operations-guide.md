@@ -78,11 +78,11 @@ The SDK and CLI do not always use the same verb names:
 
 | Task | SDK | CLI |
 | --- | --- | --- |
-| Read one record | `client.thing.get(org, repo, wref)` | `wh thing view <wref> --repo <org>/<repo>` |
-| Query current records | `client.thing.head`, `headAll`, `query`, or `queryAll` | `wh thing query --repo <org>/<repo>` |
+| Read one record | `client.thing.get(org, repo, wref)` | `wh thing view <wref> --graph <org>/<repo>` |
+| Query current records | `client.thing.head`, `headAll`, `query`, or `queryAll` | `wh thing query --graph <org>/<repo>` |
 | Create a shape | `client.shape.create(...)` | `wh shape create ...` |
 | Revise a shape | `client.shape.revise(...)` | `wh shape revise ...` |
-| Submit operations | `client.commit.apply(org, repo, message, ops, opts)` | `wh commit submit --repo <org>/<repo> --file <file> -m <message>` |
+| Submit operations | `client.commit.apply(org, repo, message, ops, opts)` | `wh commit submit --graph <org>/<repo> --file <file> -m <message>` |
 
 There is no `wh thing get`; use `wh thing view` when translating SDK examples to CLI checks. For
 inline commit JSON, `wh commit submit --ops '[...]'` is valid; for an ops file, use `--file`.
@@ -132,7 +132,7 @@ For a bulk import, write deterministic operations to JSONL and let the CLI group
 client. Give the logical submission stable identities and make add-only replay explicit:
 
 ```bash
-wh commit submit --repo <org>/<repo> --file operations.jsonl \
+wh commit submit --graph <org>/<repo> --file operations.jsonl \
   --stream-id import-2026-05 --submission-id <stable-uuid> --skip-existing \
   -m "Import May 2026"
 ```
@@ -150,7 +150,7 @@ can retain the same identity and body for an exact retry.
 Before a real group, use the server evaluator against that complete bounded group:
 
 ```bash
-wh commit submit --repo <org>/<repo> --file group.json --dry-run \
+wh commit submit --graph <org>/<repo> --file group.json --dry-run \
   --skip-existing -m "Import May 2026"
 ```
 
@@ -277,7 +277,7 @@ the real commit path:
    assertions.
 3. Commit the slice to WarmHub.
 4. Verify per-shape counts match the emitted slice.
-5. Run `wh repo describe` and inspect shape/field descriptions without project context.
+5. Run `wh graph describe` and inspect shape/field descriptions without project context.
 6. Run the load-bearing traversals from the question catalog, including reverse `refs --inbound` for
    typed wref fields and `thing about --resolve-collections` for collection `about` assertions.
 

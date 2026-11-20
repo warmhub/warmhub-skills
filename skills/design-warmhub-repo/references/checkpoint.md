@@ -80,7 +80,7 @@ All three calls paginate via `--all` so high-degree endpoints don't false-fail. 
 
 This is the dangerous question — `about` is immutable. The recovery path is **retract the bad assertions and re-assert with the correct arity**. The retracted assertions remain in version history but are hidden from default queries. If you catch this before any data is loaded (clean 2a), change the shape design and proceed; if data is already loaded (failed 2b), plan a retract-and-replay migration with cascade through dependent assertions — see [`migrations.md`](../../build-warmhub-repo/references/migrations.md) for the discipline.
 
-A `DuplicateAssertion` (`about: subjectWref` + `originalWref: string`) is the canonical failure of this gate. A `Resolution` (`about: "Arc/<name>"`, the Arc created by a prior named `kind:"collection"` op) is the canonical pass.
+A `DuplicateAssertion` (`data.about: subjectWref` + `originalWref: string`) is the canonical failure of this gate. A `Resolution` whose `data.about` is the name of a Thing that declares `Arc` in its `shapes` (written earlier in the same commit or before it) is the canonical pass.
 
 See [primitives.md § Traversability Contract](../../modeling-foundations/references/primitives.md) for the full rule.
 
@@ -111,7 +111,7 @@ See [primitives.md § Traversability Contract](../../modeling-foundations/refere
 [`modeling-foundations/references/design-rules.md`](../../modeling-foundations/references/design-rules.md)
 and confirm each rule applies to the design:
 
-- Hierarchical names that encode stable identity, not mutable state and not provenance (no `Rank/1`, no `Claim/needs-review`, no loader/source/harness tag in the name). `/`-delimited so the hierarchy is visually navigable and glob-queryable by prefix; built by one authority so two producers describing the same entity compute the same name. Full treatment and checklist in [`naming.md`](naming.md).
+- Hierarchical names that encode stable identity, not mutable state and not provenance (no `ranks/1`, no `claims/needs-review`, no loader/source/harness tag in the name). `/`-delimited so the hierarchy is visually navigable and glob-queryable by prefix; one lowercase plural prefix per kind, because names are unique across the repository and the prefix does not set the Shape; built by one authority so two producers describing the same entity compute the same name. Full treatment and checklist in [`naming.md`](naming.md).
 - Every shape has a non-trivial `description`. Every field has a non-trivial `description`. `describeRepo` would teach a context-free agent how to ask correct questions about the graph.
 - Append-only revision: status moves are reflected in certainty / basis / review events / decisions, not in deletion or mutation of prior assertions.
 - No durable debt-shapes (`ReviewDebt`, `NeedsSupport`, `BestReviewTarget`). Those are queries.

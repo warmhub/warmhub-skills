@@ -19,16 +19,20 @@ Use one source Thing for one independent judgment process.
 
 Prefer names that encode durable identity:
 
-- `Agent/reviewer/gpt-5/verdict-v2`
-- `Pipeline/triage/classifier-v3`
-- `Human/alice`
-- `Oracle/test-runner/unit-suite`
+- `agents/reviewer/gpt-5/verdict-v2`
+- `pipelines/triage/classifier-v3`
+- `humans/alice`
+- `oracles/test-runner/unit-suite`
+
+The prefix names the kind of source. It does not set the Shape: each source Thing declares its
+Shape in `shapes`. Veritas treats a source as an oracle when its certified Shapes include
+`Oracle`: the source declares `Oracle` or a Shape that composes it.
 
 Avoid names that encode ephemeral execution:
 
-- `Agent/reviewer/run-2026-06-15`
-- `Source/model-a-temperature-0-2-at-13-45`
-- `Agent/all-ai`
+- `agents/reviewer/run-2026-06-15`
+- `agents/model-a-temperature-0-2-at-13-45`
+- `agents/all-ai`
 
 Run and configuration details belong on repo-owned provenance records, not source identity, unless they define a meaningfully different judgment process that should learn separately.
 
@@ -53,8 +57,8 @@ Do not reuse one source for a strong pipeline and a weak pipeline. Veritas will 
 
 If a single product feature contains several judgment processes, model them separately:
 
-- `Pipeline/review/static-analysis`
-- `Pipeline/review/llm-summary`
-- `Pipeline/review/human-adjudication`
+- `pipelines/review/static-analysis`
+- `pipelines/review/llm-summary`
+- `pipelines/review/human-adjudication`
 
 Then let downstream display group them if needed.

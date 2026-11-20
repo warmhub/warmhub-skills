@@ -10,8 +10,8 @@ not run shell hooks, local action scripts, managed containers, or cron jobs.
   registered-component UUID is the internal ownership key for shapes and subscriptions.
 - `component.name` is unique in the target repo and resolves component CLI methods.
 - Install, update, doctor, and teardown use the registered `<org>/<name>` ref. Use
-  `wh component list --repo <org>/<repo>` to find it.
-- Invoke a declared operator method with `wh component exec <component-name> <method> --repo
+  `wh component list --graph <org>/<repo>` to find it.
+- Invoke a declared operator method with `wh component exec <component-name> <method> --graph
   <org>/<repo>`; `wh <component-name> <method>` is shorthand when the name does not shadow a
   built-in CLI command.
 
@@ -43,9 +43,9 @@ trace-reentry rules remain constrained by the manifest.
 
 ```bash
 wh component validate ./my-component
-wh component install acme/my-component --repo acme/platform
-wh component update acme/my-component --repo acme/platform
-wh component doctor acme/my-component --repo acme/platform
+wh component install acme/my-component --graph acme/platform
+wh component update acme/my-component --graph acme/platform
+wh component doctor acme/my-component --graph acme/platform
 ```
 
 Install ensures shared `ComponentInstall` and `ComponentConfig` infrastructure, records the install,
@@ -74,7 +74,7 @@ does not release or delete their rows. Subscriptions are never adopted, whether 
 another component; coordinate removal/renaming with its owner or use a new name.
 
 ```bash
-wh component teardown acme/my-component --repo acme/platform
+wh component teardown acme/my-component --graph acme/platform
 ```
 
 Teardown is terminal and non-destructive. It pauses subscriptions, dispatches the optional uninstall

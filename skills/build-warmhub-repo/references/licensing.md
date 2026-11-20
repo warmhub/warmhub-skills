@@ -10,7 +10,7 @@ qualified counsel.
 Start with the first-class read surface:
 
 ```bash
-wh repo describe <org>/<repo> --json
+wh graph describe <org>/<repo> --json
 ```
 
 Branch on the top-level `license` value.
@@ -51,8 +51,8 @@ claims, or legal conclusions.
 require the shapes to exist before the first declaration. Read the two exact well-known instances:
 
 ```bash
-wh thing view license/subject --repo <org>/<repo> --json
-wh assertion view license --repo <org>/<repo> --json
+wh thing view license/subject --graph <org>/<repo> --json
+wh assertion view license --graph <org>/<repo> --json
 ```
 
 Treat a not-found result as absence only for that exact instance. Never treat authorization,
@@ -83,7 +83,7 @@ Resolve the exact identifier against the canonical substrate:
 
 ```bash
 wh thing view "License/<SPDX-ID>" \
-  --repo warmhub-data/global.reference.licenses --json
+  --graph warmhub-data/global.reference.licenses --json
 ```
 
 Stop if lookup fails or `data.spdxId` is not an exact match. Take the returned pinned local wref,
@@ -108,7 +108,7 @@ reorder, or rewrite the expression.
 Never put an unresolved identifier in `licenseWref`. Ask the user whether to defer or explicitly
 confirm a custom/raw declaration and authoritative text. For a confirmed raw declaration, preserve
 the exact value in required `spdxIdRaw`, include `spdxExpression` only when the user explicitly
-confirmed it as an expression, and omit `licenseWref`. Expect `wh repo describe` to return
+confirmed it as an expression, and omit `licenseWref`. Expect `wh graph describe` to return
 `licenseWref: null`.
 
 ## 4. Add once or revise with a version guard
@@ -141,14 +141,14 @@ both operations together:
 
 ```bash
 wh commit submit --file license-declaration.ops.json \
-  -m "declare repository license" --repo <org>/<repo>
+  -m "declare repository license" --graph <org>/<repo>
 ```
 
 If only the valid subject exists, remove the subject operation and submit only the declaration add.
 For a confirmed replacement, first inspect the active assertion:
 
 ```bash
-wh assertion view license --repo <org>/<repo> --json
+wh assertion view license --graph <org>/<repo> --json
 ```
 
 Use its current version and a complete, reconfirmed data object (the native license fields plus
@@ -157,7 +157,7 @@ the existing `about`) in the concurrency-aware write:
 ```bash
 wh commit submit --revise license --keep-shapes \
   --data '<confirmed-complete-data-json>' --expected-version <current-version> \
-  -m "revise repository license" --repo <org>/<repo>
+  -m "revise repository license" --graph <org>/<repo>
 ```
 
 Do not use add/retract churn or an unguarded assertion revision. If the version check fails, re-read
@@ -168,15 +168,15 @@ the current declaration and ask the user to confirm against the changed state be
 After a successful write, always run:
 
 ```bash
-wh thing view license/subject --repo <org>/<repo> --json
-wh assertion view license --repo <org>/<repo>
-wh repo describe <org>/<repo> --json
+wh thing view license/subject --graph <org>/<repo> --json
+wh assertion view license --graph <org>/<repo>
+wh graph describe <org>/<repo> --json
 ```
 
 As a supplemental policy check, run doctor only for a public repository:
 
 ```bash
-wh --repo <org>/<repo> doctor
+wh --graph <org>/<repo> doctor
 ```
 
 Private repositories intentionally have no repository-license doctor check. For them, the exact
@@ -198,8 +198,8 @@ Treat the `license` declaration as the machine truth. Update the README license 
 match the confirmed declaration, publish it, and compare the readback with the local file:
 
 ```bash
-wh repo content set <org>/<repo> --kind readme --file README.md
-wh repo content get <org>/<repo> --kind readme
+wh graph content set <org>/<repo> --kind readme --file README.md
+wh graph content get <org>/<repo> --kind readme
 ```
 
 For a single SPDX declaration, copy `data.fullText` from the exact pinned substrate thing verbatim to

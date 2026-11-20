@@ -3,7 +3,7 @@
 // Implements checkpoint Gate 1 (every shape cites at least one question) as a deterministic check.
 //
 // Usage:
-//   node verify-catalog.mjs --repo <org/name> --catalog <path/to/catalog.md>
+//   node verify-catalog.mjs --graph <org/name> --catalog <path/to/catalog.md>
 //   node verify-catalog.mjs --shapes <comma-sep-list> --catalog <path>   (offline mode)
 //
 // Checks performed:
@@ -22,7 +22,7 @@ import { argv, exit } from 'node:process';
 
 const args = parseArgs(argv.slice(2));
 if (!args.catalog) usage('--catalog is required');
-if (!args.repo && !args.shapes) usage('one of --repo or --shapes is required');
+if (!args.graph && !args.shapes) usage('one of --graph or --shapes is required');
 
 function parseArgs(arr) {
   const out = {};
@@ -43,12 +43,12 @@ function parseArgs(arr) {
 
 function usage(msg) {
   if (msg) console.error(`error: ${msg}\n`);
-  console.error('usage: verify-catalog.mjs (--repo <org/name> | --shapes <a,b,c>) --catalog <path>');
+  console.error('usage: verify-catalog.mjs (--graph <org/name> | --shapes <a,b,c>) --catalog <path>');
   exit(2);
 }
 
 function getShapesFromRepo(repo) {
-  const r = spawnSync('wh', ['shape', 'list', '--repo', repo, '--json'], { encoding: 'utf8' });
+  const r = spawnSync('wh', ['shape', 'list', '--graph', repo, '--json'], { encoding: 'utf8' });
   if (r.status !== 0) {
     throw new Error(`wh shape list failed: ${r.stderr || r.stdout}`);
   }
@@ -59,7 +59,7 @@ function getShapesFromRepo(repo) {
 
 function getShapes() {
   if (args.shapes) return args.shapes.split(',').map((s) => s.trim()).filter(Boolean);
-  return getShapesFromRepo(args.repo);
+  return getShapesFromRepo(args.graph);
 }
 
 function parseCatalog(text) {

@@ -3,7 +3,7 @@
 // Implements Gate 2a (design-time) and Gate 2b (runtime, against populated data).
 //
 // Usage:
-//   node verify-relationships.mjs --repo <org/name> [--dry-run] [--sample-size N] [--shape <Name>]
+//   node verify-relationships.mjs --graph <org/name> [--dry-run] [--sample-size N] [--shape <Name>]
 //   node verify-relationships.mjs --manifest <path.json>          # offline 2a
 //
 // Modes:
@@ -53,11 +53,11 @@ const SAMPLE_SIZE = Number(args['sample-size'] ?? 10);
 const DRY_RUN = !!args['dry-run'];
 const TARGET_SHAPE = args.shape ?? null;
 const MANIFEST = args.manifest ?? null;
-const REPO = args.repo ?? null;
+const REPO = args.graph ?? null;
 
-if (!REPO && !MANIFEST) usage('one of --repo or --manifest is required');
+if (!REPO && !MANIFEST) usage('one of --graph or --manifest is required');
 if (MANIFEST && !DRY_RUN && !REPO) {
-  // manifest mode is offline; 2b not possible without --repo
+  // manifest mode is offline; 2b not possible without --graph
 }
 
 const failures = [];
@@ -82,12 +82,12 @@ function parseArgs(arr) {
 
 function usage(msg) {
   if (msg) console.error(`error: ${msg}\n`);
-  console.error('usage: verify-relationships.mjs (--repo <org/name> | --manifest <path>) [--dry-run] [--sample-size N] [--shape <Name>]');
+  console.error('usage: verify-relationships.mjs (--graph <org/name> | --manifest <path>) [--dry-run] [--sample-size N] [--shape <Name>]');
   exit(2);
 }
 
 function wh(...cliArgs) {
-  if (REPO) cliArgs = [...cliArgs, '--repo', REPO];
+  if (REPO) cliArgs = [...cliArgs, '--graph', REPO];
   const r = spawnSync('wh', [...cliArgs, '--json'], { encoding: 'utf8' });
   if (r.status !== 0) {
     throw new Error(`wh ${cliArgs.join(' ')} failed: ${r.stderr || r.stdout}`);

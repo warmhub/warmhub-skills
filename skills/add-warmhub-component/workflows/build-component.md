@@ -106,7 +106,7 @@ Example: `src/handler.ts` served at `https://handler.example.com/digest`.
 
 Deploy it to a public HTTPS endpoint and set each subscription's `webhookUrl` to that endpoint.
 When a delivery credential is bound, verify it before parsing. Deduplicate retries with
-`X-WarmHub-Idempotency-Key` or `runId`, and treat `repoSeq` as optional.
+`X-WarmHub-Idempotency-Key` or `runId`, and treat `graphSeq` as optional.
 
 ## Step 9: Document Usage
 
@@ -125,13 +125,13 @@ Run:
 ```bash
 wh component validate ./my-component
 wh component register my-component --org acme --manifest ./my-component/warmhub/manifest.json
-wh component install acme/my-component --repo <org>/<repo>
-wh component list --repo <org>/<repo>
-wh component doctor acme/my-component --repo <org>/<repo>
-wh component update acme/my-component --repo <org>/<repo>
+wh component install acme/my-component --graph <org>/<repo>
+wh component list --graph <org>/<repo>
+wh component doctor acme/my-component --graph <org>/<repo>
+wh component update acme/my-component --graph <org>/<repo>
 ```
 
-If lifecycle commands fail with "component is not installed", re-run `wh component list --repo
+If lifecycle commands fail with "component is not installed", re-run `wh component list --graph
 <org>/<repo>` and pass the registered component ref shown there. Do not pass the reverse-DNS
 manifest id unless that is exactly what the CLI lists.
 

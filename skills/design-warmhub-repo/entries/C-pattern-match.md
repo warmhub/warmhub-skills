@@ -51,7 +51,7 @@ In particular: if the source repo targets a legacy Pair, do not copy it into a n
 
 Walk the source manifest. For each shape:
 
-- **Translate the name** to your domain's noun. The literature-review pattern's `ReviewedClaim` becomes, in a defect-tracking domain, `AttributionHypothesis` or `DefectClaim` — not `ReviewedClaim/<defect-id>`. Domain-natural names matter for readability and for avoiding vocab leakage.
+- **Translate the name** to your domain's noun. The literature-review pattern's `ReviewedClaim` becomes, in a defect-tracking domain, `AttributionHypothesis` or `DefectClaim` — not a `ReviewedClaim` Thing named `claims/<defect-id>`. Translate the name prefix with the Shape (`hypotheses/<defect-id>`). Domain-natural names matter for readability and for avoiding vocab leakage.
 - **Translate the description** to your domain's vocabulary. Do not paste the source description and search-replace.
 - **Audit the field set.** Some fields will be load-bearing in your domain (keep them); some were specific to the source domain (drop them); some need new fields you didn't anticipate (add them).
 

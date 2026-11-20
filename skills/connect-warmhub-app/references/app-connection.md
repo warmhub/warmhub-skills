@@ -4,7 +4,7 @@
 
 For agent-native integration, connect the client to `POST https://mcp.warmhub.ai/mcp`. This is one
 global endpoint and one catalog: repository tools receive
-`orgName` and `repoName` as arguments. Do not configure a repo-scoped MCP URL or catalog.
+`orgName` and `graphName` as arguments. Do not configure a repo-scoped MCP URL or catalog.
 
 `initialize`, `tools/list`, and OAuth discovery work before authentication. Let standards-compliant
 clients follow the RFC 9728 `WWW-Authenticate: Bearer resource_metadata=...` challenge from a
@@ -15,7 +15,7 @@ logs, or committed client configuration as a raw value.
 Anonymous calls can read public data. A missing, malformed, or unverified Bearer token falls back to
 that anonymous tier, so listed builder tools may first return the authentication challenge. Do not
 infer that a repo is public from an anonymous miss: private targets can look not-found and should
-prompt authentication. Use `warmhub_capabilities` to orient the agent and `warmhub_repo_describe`
+prompt authentication. Use `warmhub_capabilities` to orient the agent and `warmhub_graph_describe`
 after it has the repo locator; do not hard-code the tool catalog. MCP supports ordinary repository
 creation/content/metadata and some organization metadata, but not membership, role, or archive
 administration; use the CLI or SDK for those absent operations.
@@ -29,7 +29,7 @@ Use the SDK native to the runtime: `warmhub` is a first-class option for Python 
 notebooks, and reports; `@warmhub/sdk-ts` is natural for TypeScript apps. Keep reads server-side
 whenever credentials are needed.
 
-1. Set `WARMHUB_REPO` to `org/repo` and, when needed, `WARMHUB_API_URL`.
+1. Set `WARMHUB_GRAPH` to `org/graph` and, when needed, `WARMHUB_API_URL`.
 2. Install `warmhub` (`pip install warmhub`) or `@warmhub/sdk-ts` (`bun add @warmhub/sdk-ts`).
 3. Keep `WH_TOKEN` in a server/local secret store. Omit it only for a small anonymous public probe.
 4. Fetch one stable fact (repo metadata, shapes, or one known thing) before adding a display or

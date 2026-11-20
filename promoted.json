@@ -1,41 +1,44 @@
 {
   "add-warmhub-component": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "build-warmhub-collector": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "build-warmhub-display": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "build-warmhub-repo": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "connect-warmhub-app": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "design-warmhub-repo": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "discover-warmhub-repo": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "find-self-verifying-objectives": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
+  },
+  "implement-warmhub-hub": {
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "modeling-foundations": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "plan-warmhub-ingestion": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "veritas-design": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "warmhub-builder": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   },
   "wh-commit-design": {
-    "source_commit": "2e9b56fe527698d6922ba385cd253a914576a24c"
+    "source_commit": "5e0229974850e0e26497850b3c5ec49cec0f1186"
   }
 }

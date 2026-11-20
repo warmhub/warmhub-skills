@@ -111,7 +111,7 @@ Assessment: {
 ## Creating Shapes via CLI
 
 ```bash
-wh shape create <ShapeName> --repo <org>/<repo> \
+wh shape create <ShapeName> --graph <org>/<repo> \
   --fields '{"field1":"string","field2":"number","optional_field?":"string"}'
 ```
 
@@ -139,7 +139,7 @@ for (const [name, fields] of Object.entries(SHAPES)) {
 To add or change fields, use `wh shape revise` with the FULL field set:
 
 ```bash
-wh shape revise Lender --repo <org>/<repo> \
+wh shape revise Lender --graph <org>/<repo> \
   --fields '{"lender_name":"string","state":"string","city":"string","institution?":"string"}'
 ```
 

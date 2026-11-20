@@ -4,24 +4,24 @@ Use this reference when inspecting an existing WarmHub repo. Stay read-only.
 
 ## Commands
 
-Always pass `--repo <org/repo>` unless the user has explicitly configured the repo for the current
+Always pass `--graph <org/graph>` unless the user has explicitly configured the repo for the current
 directory.
 
 ```bash
 wh prime
-wh repo view <org/repo> --json
-wh shape list --repo <org/repo> --json
-wh thing list --repo <org/repo> --count --json
-wh assertion list --repo <org/repo> --count --json
-wh thing history --repo <org/repo> --shape <ShapeName> --limit 10 --json
+wh graph view <org/graph> --json
+wh shape list --graph <org/graph> --json
+wh thing list --graph <org/graph> --count --json
+wh assertion list --graph <org/graph> --count --json
+wh thing history --graph <org/graph> --shape <ShapeName> --limit 10 --json
 ```
 
 For shape-specific inventory:
 
 ```bash
-wh thing list --repo <org/repo> --shape <ShapeName> --count --json
-wh thing query --repo <org/repo> --shape <ShapeName> --count --json
-wh assertion list --repo <org/repo> --shape <ShapeName> --count --json
+wh thing list --graph <org/graph> --shape <ShapeName> --count --json
+wh thing query --graph <org/graph> --shape <ShapeName> --count --json
+wh assertion list --graph <org/graph> --shape <ShapeName> --count --json
 ```
 
 If the CLI response includes pagination cursors, follow them when the first page is too small to
@@ -29,7 +29,7 @@ support a count or sensitivity claim.
 
 ## Facts To Collect
 
-- **Repo identity:** `org/repo`, display name, description, canonical app URL if safe to disclose.
+- **Repo identity:** `org/graph`, display name, description, canonical app URL if safe to disclose.
 - **Shapes:** names, field summaries, and likely role:
   - durable thing
   - assertion/fact/measurement
@@ -63,9 +63,9 @@ When a project-state manifest exists, update only discovery-owned fields:
 ```json
 {
   "warmhubRepo": {
-    "repo": "org/repo",
+    "repo": "org/graph",
     "repoState": "existing",
-    "attributionUrl": "https://app.warmhub.ai/orgs/org/repos/repo"
+    "attributionUrl": "https://app.warmhub.ai/orgs/org/graphs/repo"
   },
   "repoDesignSummary": {
     "shapeInventory": [],

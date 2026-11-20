@@ -7,7 +7,7 @@ repository at its exact `repoSeq`; it is not an ordinary ingest, display, or
 commit-retry step.
 
 > **Generation is retired (export v3, #10020).** Nothing creates new
-> checkpoints. Use `wh repo export` / `client.repo.export` for a fresh
+> checkpoints. Use `wh graph export` / `client.graph.export` for a fresh
 > snapshot. Archives already stored stay readable through the read surfaces
 > below until the announced cleanup.
 
@@ -15,8 +15,8 @@ commit-retry step.
 
 - A portable archive checkpoint is a whole-repository snapshot for the cases
   above.
-- A per-consumer incremental scan saves its own terminal `repoSeq` only after
-  the scan is exhausted; continue that consumer with `sinceRepoSeq`. Do not
+- A per-consumer incremental scan saves its own terminal `graphSeq` only after
+  the scan is exhausted; continue that consumer with `sinceGraphSeq`. Do not
   substitute an archive checkpoint for that cursor.
 - A write receipt/submission identity answers whether a submitted write
   applied. For ambiguous transport, stop the writer and look up the exact
@@ -31,28 +31,28 @@ retired operations for terminal failures; it is historical wire vocabulary, so
 take a repository export rather than trying to re-drive generation.
 `repository_deleted` requires no action.
 
-The TypeScript read plane is `client.repo.checkpoint`: `status`
-(exactly one of `checkpointId` or `repoSeq`), `latest`, and `getAccess`.
+The TypeScript read plane is `client.graph.checkpoint`: `status`
+(exactly one of `checkpointId` or `graphSeq`), `latest`, and `getAccess`.
 `getAccess` selects `latest` or an exact checkpoint plus `archive`,
 `manifest`, or a chunk path, and returns only a short-lived descriptor. Fetch
 its signed URL without the WarmHub bearer token. Check the downloaded byte
 length and SHA-256 against that descriptor, then stream the local archive
-through `verifyRepositoryCheckpointArchive` from `@warmhub/sdk-ts/checkpoint`.
+through `verifyGraphCheckpointArchive` from `@warmhub/sdk-ts/checkpoint`.
 
 Python has the same namespace on both clients:
-`await async_client.repo.checkpoint.status/latest/get_access`
-and synchronous counterparts. On a repository handle, `get_access` selects
-`checkpoint="latest"`, `checkpoint_id=`, or `repo_seq=` and an `artifact=`.
+`await async_client.graph.checkpoint.status/latest/get_access`
+and synchronous counterparts. On a graph handle, `get_access` selects
+`checkpoint="latest"`, `checkpoint_id=`, or `graph_seq=` and an `artifact=`.
 Verify local archive bytes with
-`verify_repository_checkpoint_archive(..., expected=...)`; it makes no server
+`verify_graph_checkpoint_archive(..., expected=...)`; it makes no server
 request.
 
 The CLI equivalent is:
 
 ```text
-wh repo checkpoint status org/repo --checkpoint ID
-wh repo checkpoint download org/repo --checkpoint ID --archive --output checkpoint.zip
-wh repo checkpoint verify checkpoint.zip
+wh graph checkpoint status org/repo --checkpoint ID
+wh graph checkpoint download org/repo --checkpoint ID --archive --output checkpoint.zip
+wh graph checkpoint verify checkpoint.zip
 ```
 
 `download` streams and checks descriptor length and
@@ -66,7 +66,7 @@ principal with unrestricted `repo:read` and `repo:checkpoint-read` for the
 repository. A narrowed or deny-all repository read matcher is not sufficient.
 
 For outcome-unknown writes, preserve the request/submission identity,
-acknowledged receipts, `lastAcknowledgedRepoSeq`, attempted operations, and
+acknowledged receipts, `lastAcknowledgedGraphSeq`, attempted operations, and
 desired state. If the write can no longer apply, take and verify a later
 repository export, recompute the plan from its rows, and issue a new
 request/stream identity. Do not blindly replay the ambiguous append or infer an
